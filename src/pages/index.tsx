@@ -12,6 +12,7 @@ import {
     getNextStep,
     submitListeningAnswer,
     submitSpeakingAudio,
+    submitSpeakingText,
     submitReadingAnswer,
     synthesizeTTS,
 } from "@/services/tutorApi";
@@ -30,6 +31,7 @@ export default function TutorPage() {
     const [isLoading, setIsLoading] = useState(false);
     const [currentMode, setCurrentMode] = useState<string>("listening");
     const [unitTitle, setUnitTitle] = useState("");
+    const [currentTargetText, setCurrentTargetText] = useState<string>("");
     const chatEndRef = useRef<HTMLDivElement>(null);
     const scrollContainerRef = useRef<HTMLDivElement>(null);
 
@@ -52,24 +54,37 @@ export default function TutorPage() {
     const initSession = async (userId: string, displayName: string) => {
         try {
             setIsLoading(true);
-            addLoadingBubble();
             const result = await startSession(userId, "mixed", displayName);
             setSessionId(result.sessionId);
             if (result.unit?.title) setUnitTitle(`Unit ${result.unit.unitNo}: ${result.unit.title}`);
             if (result.nextAction) setCurrentMode(parseMode(result.nextAction));
 
-            removeLoadingBubble();
-            addAssistantMsg(
-                result.message?.content || "สวัสดีครับ! ผมพร้อมสอนภาษาอังกฤษแล้ว 🎉",
-                result.message?.contentTh
-            );
+            if (result.messages && Array.isArray(result.messages)) {
+                const initialMsgs = result.messages.map((m: any) => ({
+                    id: genId(),
+                    role: m.role || "assistant",
+                    content: m.content,
+                    contentTh: m.contentTh,
+                    type: m.type || "text",
+                }));
+                setMessages(initialMsgs);
+            } else if (result.message) {
+                // Fallback for old structure
+                setMessages([{
+                    id: genId(),
+                    role: "assistant",
+                    content: result.message.content || "สวัสดีครับ! ผมพร้อมสอนภาษาอังกฤษแล้ว 🎉",
+                    contentTh: result.message.contentTh,
+                    type: "text",
+                }]);
+            }
 
-            // Auto fetch first step
-            if (result.sessionId) {
+            // If new session (or if needed), fetch first step. 
+            // We check if we only have 1 message (the intro message) to auto-fetch next step.
+            if (result.sessionId && (!result.messages || result.messages.length <= 1)) {
                 fetchNextStep(result.sessionId, userId);
             }
         } catch (err: any) {
-            removeLoadingBubble();
             addAssistantMsg("เกิดข้อผิดพลาดในการเริ่มเซสชัน กรุณาลองใหม่อีกครั้ง");
         } finally {
             setIsLoading(false);
@@ -85,11 +100,22 @@ export default function TutorPage() {
 
             if (step.mode) setCurrentMode(parseMode(step.mode || step.nextAction));
 
+            // Store target text for TTS regeneration
+            if ((step as any).targetText) {
+                setCurrentTargetText((step as any).targetText);
+            }
+
             // Build AI tutor message from step
             let content = step.instruction || "";
             if (step.passage) content += `\n\n"${step.passage}"`;
             if (step.pattern) content += `\n\n📝 Pattern: ${step.pattern}`;
-            if (content) addAssistantMsg(content);
+            if (content) {
+                addAssistantMsg(content);
+                // Auto-play TTS for listening mode
+                if ((step as any).ttsAvailable && (step as any).targetText) {
+                    playTTS((step as any).targetText);
+                }
+            }
         } catch {
             removeLoadingBubble();
         } finally {
@@ -97,9 +123,35 @@ export default function TutorPage() {
         }
     };
 
+    // Play TTS (for listening practice and regeneration)
+    const playTTS = useCallback(async (text: string) => {
+        try {
+            const audioUrl = await synthesizeTTS(text);
+            const audio = new Audio(audioUrl);
+            audio.play();
+        } catch {
+            console.warn("TTS failed");
+        }
+    }, []);
+
     // Handle text answer
     const handleSendText = useCallback(async (text: string) => {
         if (!sessionId || !user) return;
+
+        // Check for suggest/hint request
+        const lower = text.toLowerCase();
+        if (lower.includes("hint") || lower.includes("suggest") || lower.includes("ใบ้") || lower.includes("ช่วย")) {
+            addUserMsg(text);
+            if (currentTargetText) {
+                const words = currentTargetText.split(" ");
+                const hint = `💡 Hint: Starts with "${words[0]}" — ${words.length} words total`;
+                addAssistantMsg(hint, "ลองฟังอีกครั้งนะครับ");
+            } else {
+                addAssistantMsg("💡 ลองฟังอีกครั้งแล้วพิมพ์ตามที่ได้ยินนะครับ", "อาจารย์เชื่อว่าคุณทำได้!");
+            }
+            return;
+        }
+
         addUserMsg(text);
         setIsLoading(true);
         addLoadingBubble();
@@ -108,29 +160,30 @@ export default function TutorPage() {
             let result: any;
             if (currentMode === "listening") {
                 result = await submitListeningAnswer(sessionId, user.lineUserId, text);
+            } else if (currentMode === "speaking") {
+                result = await submitSpeakingText(sessionId, user.lineUserId, text);
             } else if (currentMode === "reading") {
                 result = await submitReadingAnswer(sessionId, user.lineUserId, text);
             } else {
-                // Fallback: treat as listening
                 result = await submitListeningAnswer(sessionId, user.lineUserId, text);
             }
 
             removeLoadingBubble();
 
-            // Show result
+            // Show result with hint
             const feedback = result.isCorrect !== undefined
                 ? (result.isCorrect ? "✅ Correct!" : "❌ Not quite right")
                 : "";
-            addResultMsg(
-                feedback + (result.correction ? `\n\nCorrection: ${result.correction}` : ""),
-                result.feedbackTh,
-                result
-            );
+            let msgContent = feedback;
+            if (result.correction) msgContent += `\n\n✏️ Correction: ${result.correction}`;
+            if (result.hint) msgContent += `\n\n💡 Hint: ${result.hint}`;
+
+            addResultMsg(msgContent, result.feedbackTh, result);
 
             // Handle next action
             if (result.nextAction) {
                 setCurrentMode(parseMode(result.nextAction));
-                if (result.nextAction !== "wait_for_answer") {
+                if (result.nextAction !== "wait_for_answer" && result.nextAction !== "retry_listening" && result.nextAction !== "retry_speaking" && result.nextAction !== "retry") {
                     setTimeout(() => fetchNextStep(sessionId, user.lineUserId), 1500);
                 }
             }
@@ -140,7 +193,7 @@ export default function TutorPage() {
         } finally {
             setIsLoading(false);
         }
-    }, [sessionId, user, currentMode]);
+    }, [sessionId, user, currentMode, currentTargetText]);
 
     // Handle audio recording (speaking mode)
     const handleSendAudio = useCallback(async (blob: Blob) => {
@@ -162,7 +215,7 @@ export default function TutorPage() {
 
             if (result.nextAction) {
                 setCurrentMode(parseMode(result.nextAction));
-                if (result.nextAction !== "wait_for_answer") {
+                if (result.nextAction !== "wait_for_answer" && result.nextAction !== "retry_speaking" && result.nextAction !== "retry") {
                     setTimeout(() => fetchNextStep(sessionId, user.lineUserId), 1500);
                 }
             }
@@ -174,16 +227,17 @@ export default function TutorPage() {
         }
     }, [sessionId, user]);
 
-    // TTS playback
+    // TTS playback for chat bubbles
     const handlePlayAudio = useCallback(async (text: string) => {
-        try {
-            const audioUrl = await synthesizeTTS(text);
-            const audio = new Audio(audioUrl);
-            audio.play();
-        } catch {
-            console.warn("TTS failed");
+        await playTTS(text);
+    }, [playTTS]);
+
+    // Regenerate TTS for listening
+    const handleRegenerateTTS = useCallback(async () => {
+        if (currentTargetText) {
+            await playTTS(currentTargetText);
         }
-    }, []);
+    }, [currentTargetText, playTTS]);
 
     // --- Message helpers ---
     const addAssistantMsg = (content: string, contentTh?: string) => {
@@ -219,8 +273,6 @@ export default function TutorPage() {
         return currentMode;
     };
 
-    const inputMode = currentMode === "speaking" ? "audio" as const : "text" as const;
-
     return (
         <div className="flex flex-col h-[100dvh] gradient-bg">
             <TutorHeader
@@ -255,19 +307,37 @@ export default function TutorPage() {
                         onPlayAudio={msg.role === "assistant" ? handlePlayAudio : undefined}
                     />
                 ))}
+
+                {/* Regenerate TTS button for listening mode */}
+                {currentMode === "listening" && currentTargetText && !isLoading && (
+                    <div className="flex justify-center my-3">
+                        <button
+                            onClick={handleRegenerateTTS}
+                            className="flex items-center gap-2 px-4 py-2 rounded-full glass text-sm text-slate-300 hover:text-white transition-colors active:scale-95"
+                            id="btn-regenerate-tts"
+                        >
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+                                <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07" />
+                            </svg>
+                            🔄 ฟังอีกครั้ง
+                        </button>
+                    </div>
+                )}
                 <div ref={chatEndRef} />
             </div>
 
             {/* Input bar */}
             <div className="mb-14">
                 <InputBar
-                    mode={isLoading ? "disabled" : inputMode}
+                    mode={isLoading ? "disabled" : "text"}
                     currentPracticeMode={currentMode}
                     onSendText={handleSendText}
                     onSendAudio={handleSendAudio}
                     isLoading={isLoading}
                     placeholder={
-                        currentMode === "listening" ? "Type what you heard..." :
+                        currentMode === "listening" ? "Type what you heard... (หรือพิมพ์ hint เพื่อขอคำใบ้)" :
+                        currentMode === "speaking" ? "พูดหรือพิมพ์ประโยคภาษาอังกฤษ..." :
                         currentMode === "reading" ? "แปลเป็นภาษาไทย..." :
                         "Type your answer..."
                     }

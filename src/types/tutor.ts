@@ -12,7 +12,8 @@ export type TutorSession = {
     nextAction: string;
     mode: string;
     unit: { unitNo: number; title: string };
-    message: { role: string; content: string; contentTh: string };
+    message?: { role: string; content: string; contentTh: string }; // Optional legacy fallback
+    messages?: { role: string; content: string; contentTh: string; type?: string }[];
     dueItems: DueItems;
 };
 

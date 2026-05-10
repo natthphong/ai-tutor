@@ -54,7 +54,7 @@ const ChatBubble: FC<Props> = ({ message, onPlayAudio }) => {
 
                         {/* Result display */}
                         {message.type === "result" && message.result && (
-                            <ResultDisplay result={message.result} />
+                            <ResultDisplay result={message.result} onPlayAudio={onPlayAudio} />
                         )}
 
                         {/* Correction */}
@@ -126,7 +126,7 @@ function AudioWaveIcon() {
     );
 }
 
-function ResultDisplay({ result }: { result: any }) {
+function ResultDisplay({ result, onPlayAudio }: { result: any; onPlayAudio?: (text: string) => void }) {
     const score = result.score ?? 0;
     const scoreClass = score >= 0.8 ? "score-pass" : score >= 0.5 ? "score-mid" : "score-fail";
 
@@ -136,9 +136,22 @@ function ResultDisplay({ result }: { result: any }) {
                 <div className={`score-circle text-sm ${scoreClass}`}>
                     {Math.round(score * 100)}%
                 </div>
-                <div>
-                    <p className="font-medium text-sm">
+                <div className="flex-1">
+                    <p className="font-medium text-sm flex items-center gap-2">
                         {score >= 0.8 ? "🎉 Excellent!" : score >= 0.5 ? "👍 Good try" : "💪 Keep practicing"}
+                        
+                        {result.targetText && score < 0.8 && onPlayAudio && (
+                            <button 
+                                onClick={() => onPlayAudio(result.targetText)}
+                                className="ml-auto flex items-center gap-1.5 px-2 py-1 rounded-md bg-indigo-500/20 text-indigo-300 hover:bg-indigo-500/30 transition-colors text-xs"
+                            >
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                    <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+                                    <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07" />
+                                </svg>
+                                ฟังอีกครั้ง
+                            </button>
+                        )}
                     </p>
                     {result.feedbackTh && (
                         <p className="text-xs text-slate-400 mt-0.5">{result.feedbackTh}</p>
@@ -149,6 +162,12 @@ function ResultDisplay({ result }: { result: any }) {
                 <div className="mt-2 px-3 py-2 rounded-lg bg-amber-500/10 border border-amber-500/20">
                     <p className="text-xs text-amber-400 font-medium mb-1">✏️ Correction</p>
                     <p className="text-sm text-slate-300">{result.correction}</p>
+                </div>
+            )}
+            {result.hint && (
+                <div className="mt-2 px-3 py-2 rounded-lg bg-indigo-500/10 border border-indigo-500/20">
+                    <p className="text-xs text-indigo-400 font-medium mb-1">💡 Hint</p>
+                    <p className="text-sm text-slate-300">{result.hint}</p>
                 </div>
             )}
             {result.vocabulary && result.vocabulary.length > 0 && (

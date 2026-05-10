@@ -64,6 +64,14 @@ export async function submitSpeakingAudio(sessionId: string, userId: string, aud
     return unwrapResponse(data);
 }
 
+export async function submitSpeakingText(sessionId: string, userId: string, text: string) {
+    const { data } = await axios.post<ApiResponse<SpeakingResult>>(
+        `${BASE}/tutor/sessions/${sessionId}/speaking/text`,
+        { userId, text }
+    );
+    return unwrapResponse(data);
+}
+
 export async function submitReadingAnswer(sessionId: string, userId: string, translation: string, lessonItemId?: string) {
     const { data } = await axios.post<ApiResponse<ReadingResult>>(
         `${BASE}/tutor/sessions/${sessionId}/reading/answer`,
@@ -92,7 +100,9 @@ export async function getProgress(userId: string) {
 
 export async function synthesizeTTS(text: string) {
     const response = await axios.post(`${BASE}/voice/tts`, { text }, { responseType: "blob" });
-    return URL.createObjectURL(response.data);
+    // Force audio/wav type as Gemini typically returns WAV
+    const audioBlob = new Blob([response.data], { type: "audio/wav" });
+    return URL.createObjectURL(audioBlob);
 }
 
 export async function ingestLessons() {
