@@ -9,7 +9,7 @@ export type AuthPayload = {
 };
 
 export async function loginWithFirebase(idToken: string) {
-    const { data } = await axios.post<ApiResponse<AuthPayload>>("/v1/auth/login", { idToken });
+    const { data } = await axios.post<ApiResponse<AuthPayload>>("/v1/auth/line-login", { idToken });
     return unwrapResponse(data);
 }
 
@@ -19,11 +19,18 @@ export async function loginWithLineProfile(lineProfile: {
     pictureUrl?: string | null;
     email?: string | null;
 }) {
-    const { data } = await axios.post<ApiResponse<AuthPayload>>("/v1/auth/login", { lineProfile });
+    const { data } = await axios.post<ApiResponse<AuthPayload>>("/v1/auth/line-login", { lineProfile });
+    return unwrapResponse(data);
+}
+
+export async function refreshToken(refreshToken: string) {
+    const { data } = await axios.post<ApiResponse<{ accessToken: string; refreshToken: string }>>("/v1/auth/line-refresh", {
+        refreshToken,
+    });
     return unwrapResponse(data);
 }
 
 export async function fetchMe() {
-    const { data } = await axios.get<ApiResponse<{ user: UserRecord }>>("/v1/auth/me");
+    const { data } = await axios.get<ApiResponse<{ user: UserRecord }>>("/v1/auth/line-me");
     return unwrapResponse(data).user;
 }

@@ -39,7 +39,7 @@ function getRequestPath(config: any): string {
 
 function isAuthRequest(config: any) {
     const path = getRequestPath(config);
-    return path === "/v1/auth/login" || path === "/v1/auth/refresh";
+    return path === "/v1/auth/line-login" || path === "/v1/auth/line-refresh";
 }
 
 function clearCustomerState() {
@@ -82,7 +82,7 @@ axios.interceptors.response.use(
                 try {
                     const rt = store.getState().auth.refreshToken;
                     if (!rt) throw new Error("no_refresh");
-                    const r = await Axios.post<ApiResponse<{ accessToken: string; refreshToken: string }>>(`${API_BASE_URL}/v1/auth/refresh`, {
+                    const r = await Axios.post<ApiResponse<{ accessToken: string; refreshToken: string }>>(`${API_BASE_URL}/v1/auth/line-refresh`, {
                         refreshToken: rt,
                     });
                     const tokens = r.data?.body;
