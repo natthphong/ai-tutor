@@ -59,7 +59,26 @@ export default function RequireAuth({ children }: { children: React.ReactNode })
         if (bootstrapRef.current || bootstrapping) return;
         bootstrapRef.current = true;
         setBootstrapping(true);
-    }, [accessToken, bootstrapping, dispatch, hydrated, router]);
+
+        const init = async () => {
+            try {
+                // If we don't have the user in Redux, fetch it
+                if (!user) {
+                    const { fetchMe } = await import("@/services/auth");
+                    const me = await fetchMe();
+                    dispatch(setUser(me));
+                }
+            } catch (err) {
+                logError("Failed to fetch user profile", err);
+                dispatch(logout());
+                clearTokens();
+            } finally {
+                setBootstrapping(false);
+            }
+        };
+
+        void init();
+    }, [accessToken, bootstrapping, dispatch, hydrated, router, user]);
 
     if (!hydrated || !accessToken || bootstrapping) return null;
     return <>{children}</>;
