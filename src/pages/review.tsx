@@ -3,19 +3,12 @@ import { useEffect, useState, useCallback } from "react";
 import { useSelector } from "react-redux";
 import type { RootState } from "@/store";
 import BottomNav from "@/components/tutor/BottomNav";
-import { getDueReviews, reviewFlashcard, synthesizeTTS } from "@/services/tutorApi";
-
-type FlashcardItem = {
-    id: string;
-    front: string;
-    back: string;
-    example?: string;
-    masteryScore?: number;
-};
+import { getDueReviews, getReviewFlashcards, reviewFlashcard, synthesizeTTS } from "@/services/tutorApi";
+import type { ReviewFlashcardItem } from "@/types/tutor";
 
 export default function ReviewPage() {
     const user = useSelector((s: RootState) => s.auth.user) as any;
-    const [cards, setCards] = useState<FlashcardItem[]>([]);
+    const [cards, setCards] = useState<ReviewFlashcardItem[]>([]);
     const [currentIdx, setCurrentIdx] = useState(0);
     const [flipped, setFlipped] = useState(false);
     const [loading, setLoading] = useState(true);
@@ -25,19 +18,14 @@ export default function ReviewPage() {
     useEffect(() => {
         if (!user?.lineUserId && !user?.id) return;
         const userId = user.lineUserId || user.id;
-        getDueReviews(userId).then((data: any) => {
-            const count = (data.vocabularyDueCount || 0) + (data.weaknessDueCount || 0);
-            setDueCount(count);
-            // Mock cards for now - in production, fetch actual flashcard data
-            if (count > 0) {
-                setCards(Array.from({ length: Math.min(count, 10) }, (_, i) => ({
-                    id: `card-${i}`,
-                    front: `Vocabulary word ${i + 1}`,
-                    back: `คำศัพท์ ${i + 1}`,
-                    example: `This is an example sentence.`,
-                })));
-            }
-        }).catch(() => {}).finally(() => setLoading(false));
+        Promise.all([getDueReviews(userId), getReviewFlashcards(userId, 20)])
+            .then(([dueData, cardsData]: any[]) => {
+                const count = (dueData.vocabularyDueCount || 0) + (dueData.weaknessDueCount || 0) + (dueData.unitReviewDueCount || 0);
+                setDueCount(count);
+                setCards(cardsData.cards || []);
+            })
+            .catch(() => {})
+            .finally(() => setLoading(false));
     }, [user]);
 
     const handleScore = useCallback(async (score: number) => {
@@ -150,19 +138,19 @@ export default function ReviewPage() {
                     {flipped && (
                         <div className="grid grid-cols-3 gap-3 animate-slide-up">
                             <button
-                                onClick={() => handleScore(1)}
+                                onClick={() => handleScore(0.4)}
                                 className="py-4 rounded-2xl bg-red-500/10 border border-red-500/20 text-red-400 font-medium text-sm active:scale-95 transition-transform"
                             >
                                 😵 Again
                             </button>
                             <button
-                                onClick={() => handleScore(3)}
+                                onClick={() => handleScore(0.7)}
                                 className="py-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-400 font-medium text-sm active:scale-95 transition-transform"
                             >
                                 🤔 Hard
                             </button>
                             <button
-                                onClick={() => handleScore(5)}
+                                onClick={() => handleScore(1)}
                                 className="py-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-medium text-sm active:scale-95 transition-transform"
                             >
                                 🎯 Easy

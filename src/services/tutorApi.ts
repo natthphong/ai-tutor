@@ -10,6 +10,9 @@ import type {
     FlashcardReviewResult,
     DueItems,
     ProgressData,
+    TutorAction,
+    TutorTurnResponse,
+    ReviewFlashcardItem,
 } from "@/types/tutor";
 
 const BASE = "/v1";
@@ -40,6 +43,20 @@ export async function getNextStep(sessionId: string, userId: string) {
     const { data } = await axios.post<ApiResponse<TutorStep>>(
         `${BASE}/tutor/sessions/${sessionId}/next`,
         { userId }
+    );
+    return unwrapResponse(data);
+}
+
+export async function submitTutorTurn(
+    sessionId: string,
+    userId: string,
+    text: string,
+    inputKind: "text" | "audio" = "text",
+    clientAction?: TutorAction
+) {
+    const { data } = await axios.post<ApiResponse<TutorTurnResponse>>(
+        `${BASE}/tutor/sessions/${sessionId}/turn`,
+        { userId, text, inputKind, clientAction }
     );
     return unwrapResponse(data);
 }
@@ -85,6 +102,13 @@ export async function getDueReviews(userId: string) {
     return unwrapResponse(data);
 }
 
+export async function getReviewFlashcards(userId: string, limit = 20) {
+    const { data } = await axios.get<ApiResponse<{ cards: ReviewFlashcardItem[] }>>(
+        `${BASE}/tutor/reviews/flashcards?userId=${encodeURIComponent(userId)}&limit=${limit}`
+    );
+    return unwrapResponse(data);
+}
+
 export async function reviewFlashcard(flashcardId: string, userId: string, score: number) {
     const { data } = await axios.post<ApiResponse<FlashcardReviewResult>>(
         `${BASE}/tutor/reviews/flashcards/${flashcardId}/answer`,
@@ -107,5 +131,38 @@ export async function synthesizeTTS(text: string) {
 
 export async function ingestLessons() {
     const { data } = await axios.post<ApiResponse<{ count: number }>>(`${BASE}/admin/lessons/ingest`);
+    return unwrapResponse(data);
+}
+
+// Lesson chat history + per-unit progress so refresh keeps the chat alive.
+export type LessonChatMessage = {
+    role: "user" | "assistant" | "system";
+    content: string;
+    contentTh?: string;
+    type?: string;
+};
+
+export async function getLessonChat(lessonId: number | string, userId?: string) {
+    const qs = userId ? `?userId=${encodeURIComponent(userId)}` : "";
+    const { data } = await axios.get<ApiResponse<{ lessonId: number; messages: LessonChatMessage[] }>>(
+        `${BASE}/lessons/${lessonId}/chat${qs}`,
+    );
+    return unwrapResponse(data);
+}
+
+export async function appendLessonChat(
+    lessonId: number | string,
+    message: LessonChatMessage & { sessionId?: string; userId?: string; metadata?: Record<string, unknown> },
+) {
+    const { data } = await axios.post<ApiResponse<{ ok: boolean }>>(
+        `${BASE}/lessons/${lessonId}/chat`,
+        message,
+    );
+    return unwrapResponse(data);
+}
+
+export async function getLessonProgress(lessonId: number | string, userId?: string) {
+    const qs = userId ? `?userId=${encodeURIComponent(userId)}` : "";
+    const { data } = await axios.get<ApiResponse<any>>(`${BASE}/lessons/${lessonId}/progress${qs}`);
     return unwrapResponse(data);
 }

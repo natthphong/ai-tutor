@@ -4,7 +4,6 @@ import { useRouter } from "next/router";
 import { useSelector } from "react-redux";
 import { I18N_KEYS } from "@/constants/i18nKeys";
 import { useI18n } from "@/utils/i18n";
-import { formatTHB } from "@/utils/currency";
 import { useAppDispatch, type RootState } from "@/store";
 import { logoutCustomer } from "@/utils/logout";
 
@@ -18,9 +17,6 @@ const Navbar: React.FC = () => {
     const adminSession = useSelector((state: RootState) => state.adminAuth.session);
     const [open, setOpen] = useState(false);
     const menuRef = useRef<HTMLDivElement | null>(null);
-
-    const balanceValue = typeof user?.walletBalance === "number" ? user.walletBalance : 0;
-    const formattedBalance = formatTHB(balanceValue);
 
     useEffect(() => {
         function handleClickOutside(event: MouseEvent) {
@@ -71,12 +67,7 @@ const Navbar: React.FC = () => {
                 </div>
 
                 <div className="flex items-center gap-3 text-sm text-slate-700">
-                    {user && (
-                        <span
-                            className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-700 shadow-sm">
-                            {formattedBalance}
-                        </span>
-                    )}
+                    {user && <span className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-700 shadow-sm">{user.displayName || `User ${user.id}`}</span>}
                     <div className="relative" ref={menuRef}>
                         <button
                             type="button"
@@ -105,17 +96,6 @@ const Navbar: React.FC = () => {
                         {open && (
                             <div
                                 className="absolute right-0 z-20 mt-2 w-60 rounded-2xl border border-slate-200 bg-white p-2 shadow-lg">
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        setOpen(false);
-                                        const ev = new CustomEvent("open-deposit-modal");
-                                        window.dispatchEvent(ev);
-                                    }}
-                                    className="w-full rounded-xl px-3 py-2 text-left text-sm font-medium text-slate-700 transition hover:bg-emerald-50 focus:outline-none focus:ring-4 focus:ring-emerald-100"
-                                >
-                                    {t(I18N_KEYS.DEPOSIT_ACTION)}
-                                </button>
                                 <button
                                     type="button"
                                     onClick={() => handleNavigate("/account?tab=profile")}

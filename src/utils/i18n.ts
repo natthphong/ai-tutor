@@ -12,7 +12,7 @@ export type TranslationParams = Record<string, string | number | boolean | null 
 const STORAGE_KEY = "app.lang";
 const LEGACY_STORAGE_KEY = "locale";
 const DEFAULT_LOCALE: Locale = "en";
-const DICTIONARY = dictionary as Dictionary;
+const DICTIONARY = dictionary as unknown as Dictionary;
 
 let cachedLocale: Locale = DEFAULT_LOCALE;
 

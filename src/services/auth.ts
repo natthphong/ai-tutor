@@ -8,6 +8,34 @@ export type AuthPayload = {
     user: UserRecord;
 };
 
+// Local username/password login (no LINE notifications).
+export async function loginLocal(username: string, password: string) {
+    const { data } = await axios.post<ApiResponse<AuthPayload>>("/v1/auth/login", {
+        username,
+        password,
+    });
+    return unwrapResponse(data);
+}
+
+export async function registerLocal(username: string, password: string, displayName?: string) {
+    const { data } = await axios.post<ApiResponse<AuthPayload>>("/v1/auth/register", {
+        username,
+        password,
+        displayName,
+    });
+    return unwrapResponse(data);
+}
+
+export async function fetchMeLocal() {
+    const { data } = await axios.get<ApiResponse<{ user: UserRecord }>>("/v1/auth/me");
+    return unwrapResponse(data).user;
+}
+
+export async function logoutLocal() {
+    const { data } = await axios.post<ApiResponse<{ ok: boolean }>>("/v1/auth/logout", {});
+    return unwrapResponse(data);
+}
+
 export async function loginWithFirebase(idToken: string) {
     const { data } = await axios.post<ApiResponse<AuthPayload>>("/v1/auth/line-login", { idToken });
     return unwrapResponse(data);

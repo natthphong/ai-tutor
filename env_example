@@ -1,3 +1,26 @@
-NEXT_PUBLIC_API_BASE_URL=
+# Frontend (Next.js)
+NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:8080/ai-tutor/api
 NEXT_PUBLIC_LINE_LIFF_ID=
 
+# Backend (Go) — read by config/config.yaml / Viper (.env or shell)
+DATABASE_URL=postgres://postgres:@localhost:5432/ai_tutor?sslmode=disable
+JWT_SECRET=ai-tutor-loop-secret-key-2026
+
+# AI provider keys
+GEMINI_API_KEY=
+OPENROUTER_API_KEY=
+OPENAI_API_KEY=
+
+# MinIO (S3-compatible storage for TTS cache, recordings, shadowing video)
+MINIO_ENDPOINT=localhost:9000
+MINIO_ACCESS_KEY=minioadmin
+MINIO_SECRET_KEY=minioadmin
+MINIO_BUCKET=ai-tutor
+MINIO_PUBLIC_URL=http://localhost:9000/ai-tutor
+
+# Local auth (username/password) so AI agents and devs can test without LINE.
+LOCAL_AUTH_ENABLED=true
+
+# Shadowing pipeline. If yt-dlp / Gemini are not available the backend uses
+# canned segments so the UI still works. Set this to "true" to force-fallback.
+SHADOWING_LOCAL_FALLBACK=false

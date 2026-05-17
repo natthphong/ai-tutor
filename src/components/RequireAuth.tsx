@@ -62,10 +62,17 @@ export default function RequireAuth({ children }: { children: React.ReactNode })
 
         const init = async () => {
             try {
-                // If we don't have the user in Redux, fetch it
+                // If we don't have the user in Redux, fetch it. We try the
+                // generic /auth/me endpoint first (used by both LINE and
+                // local auth) and fall back to the LINE-specific one.
                 if (!user) {
-                    const { fetchMe } = await import("@/services/auth");
-                    const me = await fetchMe();
+                    const { fetchMe, fetchMeLocal } = await import("@/services/auth");
+                    let me: any;
+                    try {
+                        me = await fetchMeLocal();
+                    } catch {
+                        me = await fetchMe();
+                    }
                     dispatch(setUser(me));
                 }
             } catch (err) {

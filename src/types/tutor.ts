@@ -15,6 +15,7 @@ export type TutorSession = {
     message?: { role: string; content: string; contentTh: string }; // Optional legacy fallback
     messages?: { role: string; content: string; contentTh: string; type?: string }[];
     dueItems: DueItems;
+    availableActions?: TutorAction[];
 };
 
 export type DueItems = {
@@ -33,6 +34,34 @@ export type TutorStep = {
     pattern?: string;
     audioUrl?: string;
     explanation?: Record<string, unknown>;
+    lessonItemId?: string;
+    targetText?: string;
+    ttsAvailable?: boolean;
+    situation?: string;
+};
+
+export type TutorAction = "answer" | "hint" | "repeat" | "review" | "restart" | "continue";
+
+export type TutorPractice = {
+    lessonItemId?: string;
+    targetText?: string;
+    passage?: string;
+    pattern?: string;
+    ttsAvailable?: boolean;
+};
+
+export type TutorTurnResponse = {
+    sessionId: string;
+    unit?: { unitNo: number; title: string };
+    unitId?: number;
+    mode: string;
+    intent: string;
+    intentConfidence?: number;
+    nextAction: string;
+    messages?: { role: "user" | "assistant" | "system"; content: string; contentTh?: string; type?: ChatMessage["type"] }[];
+    result?: ListeningResult | SpeakingResult | ReadingResult | Record<string, unknown>;
+    practice?: TutorPractice;
+    availableActions?: TutorAction[];
 };
 
 export type ListeningResult = {
@@ -56,6 +85,10 @@ export type SpeakingResult = {
     level?: string;
     sttProvider?: string;
     sttConfidence?: number;
+    grammarScore?: number;
+    pronunciationScore?: number;
+    fluencyScore?: number;
+    nativeSuggestion?: string;
 };
 
 export type ReadingResult = {
@@ -73,6 +106,16 @@ export type FlashcardReviewResult = {
     nextDueAt: string;
     masteryScore: number;
     level: string;
+};
+
+export type ReviewFlashcardItem = {
+    id: string;
+    front: string;
+    back: string;
+    example?: string;
+    exampleTh?: string;
+    cardType: string;
+    masteryScore: number;
 };
 
 export type ProgressData = {

@@ -9,11 +9,11 @@ export function logInfo(msg: string, obj?: LogObj) {
     console.log(`[INFO] ${ts()} ${msg}`, obj ? safe(obj) : "");
 }
 
-export function logError(msg: string, obj?: LogObj) {
+export function logError(msg: string, obj?: unknown) {
     console.error(`[ERROR] ${ts()} ${msg}`, obj ? safe(obj) : "");
 }
 
-function safe(o: LogObj) {
+function safe(o: unknown) {
     try {
         const s = JSON.stringify(o, (_k, v) => {
             if (typeof v === "string") {

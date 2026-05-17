@@ -3,8 +3,9 @@ import { type FC } from "react";
 import { useRouter } from "next/router";
 
 const TABS = [
-    { path: "/", icon: "chat", label: "Learn" },
-    { path: "/progress", icon: "progress", label: "Progress" },
+    { path: "/", icon: "progress", label: "Home" },
+    { path: "/tutor", icon: "chat", label: "Learn" },
+    { path: "/shadowing", icon: "shadow", label: "Shadowing" },
     { path: "/review", icon: "review", label: "Review" },
 ] as const;
 
@@ -53,6 +54,12 @@ function TabIcon({ icon, active }: { icon: string; active: boolean }) {
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={stroke} strokeWidth="2">
                     <rect x="2" y="3" width="20" height="14" rx="2" />
                     <path d="M8 21h8M12 17v4" />
+                </svg>
+            );
+        case "shadow":
+            return (
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={stroke} strokeWidth="2">
+                    <path d="M3 7l5-3v16l-5-3V7zM10 4l5 3v10l-5 3V4zM17 7v10" />
                 </svg>
             );
         default:

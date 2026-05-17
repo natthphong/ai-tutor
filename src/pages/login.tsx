@@ -5,6 +5,7 @@ import { useAppDispatch } from "@/store";
 import { setTokens, setUser } from "@/store/authSlice";
 import { saveTokens } from "@/utils/tokenStorage";
 import { loginWithLine } from "@/services/tutorApi";
+import { loginLocal, registerLocal } from "@/services/auth";
 
 const LIFF_ID = process.env.NEXT_PUBLIC_LINE_LIFF_ID || "";
 
@@ -13,6 +14,31 @@ export default function LoginPage() {
     const dispatch = useAppDispatch();
     const [status, setStatus] = useState<"init" | "loading" | "error">("init");
     const [errorMsg, setErrorMsg] = useState("");
+    const [localUsername, setLocalUsername] = useState("");
+    const [localPassword, setLocalPassword] = useState("");
+    const [showRegister, setShowRegister] = useState(false);
+
+    const handleLocalAuth = useCallback(async (mode: "login" | "register") => {
+        if (!localUsername || !localPassword) {
+            setStatus("error");
+            setErrorMsg("กรอก username และ password ก่อนนะครับ");
+            return;
+        }
+        try {
+            setStatus("loading");
+            const result = mode === "register"
+                ? await registerLocal(localUsername, localPassword, localUsername)
+                : await loginLocal(localUsername, localPassword);
+            dispatch(setTokens({ accessToken: result.accessToken, refreshToken: result.refreshToken }));
+            saveTokens({ accessToken: result.accessToken, refreshToken: result.refreshToken });
+            dispatch(setUser(result.user as any));
+            router.replace("/");
+        } catch (err: any) {
+            setStatus("error");
+            const msg = err?.response?.data?.message || err?.message || "Login failed";
+            setErrorMsg(msg);
+        }
+    }, [dispatch, router, localUsername, localPassword]);
 
     const handleLiffLogin = useCallback(async () => {
         try {
@@ -82,21 +108,62 @@ export default function LoginPage() {
                     </p>
                 </div>
 
-                {/* Login Button */}
+                {/* Login Buttons */}
                 {status === "init" && (
-                    <button
-                        onClick={handleLiffLogin}
-                        className="w-full py-4 rounded-2xl font-semibold text-white text-lg shadow-lg transition-all active:scale-95 hover:shadow-xl"
-                        style={{ background: "#06C755" }}
-                        id="btn-line-login"
-                    >
-                        <span className="flex items-center justify-center gap-3">
-                            <svg width="28" height="28" viewBox="0 0 24 24" fill="white">
-                                <path d="M12 2C6.48 2 2 5.69 2 10.18c0 3.07 2.35 5.77 5.87 7.16l-.68 2.49c-.05.19.02.4.17.52.1.08.22.12.33.12.08 0 .17-.02.24-.06l2.97-1.97c.36.04.73.06 1.1.06 5.52 0 10-3.69 10-8.18C22 5.69 17.52 2 12 2z" />
-                            </svg>
-                            เข้าสู่ระบบด้วย LINE
-                        </span>
-                    </button>
+                    <div className="space-y-4">
+                        <button
+                            onClick={handleLiffLogin}
+                            className="w-full py-4 rounded-2xl font-semibold text-white text-lg shadow-lg transition-all active:scale-95 hover:shadow-xl"
+                            style={{ background: "#06C755" }}
+                            id="btn-line-login"
+                        >
+                            <span className="flex items-center justify-center gap-3">
+                                <svg width="28" height="28" viewBox="0 0 24 24" fill="white">
+                                    <path d="M12 2C6.48 2 2 5.69 2 10.18c0 3.07 2.35 5.77 5.87 7.16l-.68 2.49c-.05.19.02.4.17.52.1.08.22.12.33.12.08 0 .17-.02.24-.06l2.97-1.97c.36.04.73.06 1.1.06 5.52 0 10-3.69 10-8.18C22 5.69 17.52 2 12 2z" />
+                                </svg>
+                                เข้าสู่ระบบด้วย LINE
+                            </span>
+                        </button>
+
+                        <div className="text-xs text-slate-500 uppercase tracking-wider">หรือใช้บัญชี local (สำหรับเทส)</div>
+
+                        <div className="glass rounded-2xl p-4 text-left space-y-3">
+                            <input
+                                type="text"
+                                placeholder="username (เช่น test)"
+                                value={localUsername}
+                                onChange={(e) => setLocalUsername(e.target.value)}
+                                className="w-full px-3 py-2 rounded-lg bg-slate-800/60 border border-slate-700 text-sm text-white outline-none focus:border-indigo-400"
+                            />
+                            <input
+                                type="password"
+                                placeholder="password (เช่น test1234)"
+                                value={localPassword}
+                                onChange={(e) => setLocalPassword(e.target.value)}
+                                className="w-full px-3 py-2 rounded-lg bg-slate-800/60 border border-slate-700 text-sm text-white outline-none focus:border-indigo-400"
+                            />
+                            <div className="flex gap-2">
+                                <button
+                                    onClick={() => handleLocalAuth("login")}
+                                    className="flex-1 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium"
+                                    id="btn-local-login"
+                                >
+                                    Login
+                                </button>
+                                <button
+                                    onClick={() => handleLocalAuth(showRegister ? "register" : "login")}
+                                    onMouseEnter={() => setShowRegister(true)}
+                                    className="flex-1 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-white text-sm font-medium"
+                                    id="btn-local-register"
+                                >
+                                    Register
+                                </button>
+                            </div>
+                            <p className="text-[11px] text-slate-500">
+                                Dev seed: <code className="text-slate-300">test / test1234</code>
+                            </p>
+                        </div>
+                    </div>
                 )}
 
                 {/* Loading */}

@@ -1,5 +1,10 @@
 // src/components/tutor/TutorHeader.tsx
 import { type FC } from "react";
+import { useRouter } from "next/router";
+import { useAppDispatch } from "@/store";
+import { logout } from "@/store/authSlice";
+import { clearTokens } from "@/utils/tokenStorage";
+import { logoutLocal } from "@/services/auth";
 import type { TutorUser } from "@/types/tutor";
 
 type Props = {
@@ -11,6 +16,14 @@ type Props = {
 };
 
 const TutorHeader: FC<Props> = ({ user, unitTitle, currentMode, onSettings, onClose }) => {
+    const router = useRouter();
+    const dispatch = useAppDispatch();
+    const onLogout = async () => {
+        try { await logoutLocal(); } catch {}
+        dispatch(logout());
+        clearTokens();
+        void router.replace("/login");
+    };
     return (
         <header className="px-4 py-3 glass border-b border-white/5 safe-top">
             <div className="flex items-center justify-between">
@@ -63,6 +76,14 @@ const TutorHeader: FC<Props> = ({ user, unitTitle, currentMode, onSettings, onCl
                             </svg>
                         </button>
                     )}
+                    <button
+                        onClick={onLogout}
+                        className="p-2 rounded-lg hover:bg-white/5 transition-colors text-xs text-slate-400"
+                        id="btn-logout"
+                        title="Logout"
+                    >
+                        ⎋
+                    </button>
                 </div>
             </div>
         </header>
