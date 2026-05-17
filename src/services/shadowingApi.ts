@@ -14,7 +14,23 @@ export type ShadowingClip = {
     proxyStreamUrl?: string;
     durationSeconds: number;
     status: "pending" | "processing" | "ready" | "failed";
+    videoStatus?: "pending" | "processing" | "ready" | "failed";
+    transcriptStatus?: "pending" | "processing" | "ready" | "failed";
     errorMessage?: string;
+    folderId?: string;
+    isCompleted?: boolean;
+    watchedAt?: string | null;
+    lastSegmentIndex?: number;
+    lastWatchedTime?: number;
+    createdAt: string;
+    updatedAt: string;
+};
+
+export type ShadowingFolder = {
+    id: string;
+    name: string;
+    color?: string;
+    clipCount: number;
     createdAt: string;
     updatedAt: string;
 };
@@ -46,11 +62,56 @@ export async function createShadowingClip(youtubeUrl: string) {
     return unwrapResponse(data);
 }
 
-export async function listShadowingClips(limit = 30) {
+export async function listShadowingClips(
+    opts: { limit?: number; sort?: "recent" | "watched"; folderId?: string; unwatched?: boolean } = {},
+) {
+    const params = new URLSearchParams();
+    if (opts.limit) params.set("limit", String(opts.limit));
+    if (opts.sort) params.set("sort", opts.sort);
+    if (opts.folderId) params.set("folderId", opts.folderId);
+    if (opts.unwatched) params.set("unwatched", "true");
     const { data } = await axios.get<ApiResponse<{ clips: ShadowingClip[] }>>(
-        `/v1/shadowing/clips?limit=${limit}`,
+        `/v1/shadowing/clips?${params.toString()}`,
     );
     return unwrapResponse(data).clips || [];
+}
+
+export async function markShadowingWatched(clipId: string, completed: boolean) {
+    const { data } = await axios.post<ApiResponse<{ ok: boolean }>>(
+        `/v1/shadowing/clips/${clipId}/mark-watched`,
+        { completed },
+    );
+    return unwrapResponse(data);
+}
+
+export async function moveShadowingClipToFolder(clipId: string, folderId: string | null) {
+    const { data } = await axios.post<ApiResponse<{ ok: boolean }>>(
+        `/v1/shadowing/clips/${clipId}/folder`,
+        { folderId: folderId || "" },
+    );
+    return unwrapResponse(data);
+}
+
+export async function listShadowingFolders() {
+    const { data } = await axios.get<ApiResponse<{ folders: ShadowingFolder[] }>>(
+        `/v1/shadowing/folders`,
+    );
+    return unwrapResponse(data).folders || [];
+}
+
+export async function createShadowingFolder(name: string, color?: string) {
+    const { data } = await axios.post<ApiResponse<ShadowingFolder>>(
+        `/v1/shadowing/folders`,
+        { name, color },
+    );
+    return unwrapResponse(data);
+}
+
+export async function deleteShadowingFolder(folderId: string) {
+    const { data } = await axios.delete<ApiResponse<{ ok: boolean }>>(
+        `/v1/shadowing/folders/${folderId}`,
+    );
+    return unwrapResponse(data);
 }
 
 export async function getShadowingClip(clipId: string) {
@@ -119,6 +180,16 @@ export async function translateSegment(clipId: string, segmentId: string) {
 export async function scoreShadowingRecording(clipId: string, recordingId: string) {
     const { data } = await axios.post<ApiResponse<{ score: number; feedback: string }>>(
         `/v1/shadowing/clips/${clipId}/recordings/${recordingId}/score`,
+        {},
+    );
+    return unwrapResponse(data);
+}
+
+// Re-runs Gemini transcript generation for an existing clip. Keeps id /
+// streamUrl / progress / recordings / notes untouched.
+export async function retryShadowingClip(clipId: string) {
+    const { data } = await axios.post<ApiResponse<{ ok: boolean; clip: ShadowingClip }>>(
+        `/v1/shadowing/clips/${clipId}/retry`,
         {},
     );
     return unwrapResponse(data);

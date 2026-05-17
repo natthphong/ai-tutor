@@ -6,16 +6,18 @@
 //   └──────────────────────────────┴──────────────────────────┘
 // Bottom nav remains visible (shared layout).
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/router";
 import { useSelector } from "react-redux";
 import Link from "next/link";
 import BottomNav from "@/components/tutor/BottomNav";
 import type { RootState } from "@/store";
+import { useYouTubePlayer } from "@/hooks/useYouTubePlayer";
 import {
     getShadowingClip,
     listShadowingNotes,
     listShadowingRecordings,
+    retryShadowingClip,
     saveShadowingProgress,
     scoreShadowingRecording,
     translateSegment,
@@ -108,26 +110,88 @@ export default function ShadowingDetailPage() {
         setScore(null);
     }, [clipId, currentSeg]);
 
-    useEffect(() => {
-        if (videoRef.current) videoRef.current.playbackRate = speed;
-    }, [speed]);
+    // -----------------------------------------------------------------
+    // Player wiring – handles both YouTube embed (via YT IFrame API) and the
+    // legacy <video> path. All control surfaces (Replay / Prev / Next / Play
+    // / Loop / Auto-stop / Speed / Transcript click) talk to ONE set of
+    // helpers below; they branch internally.
+    // -----------------------------------------------------------------
+    const clipYTId = detail?.clip.youtubeId || "";
+    const streamUrlEarly = detail?.clip.streamUrl || "";
+    const useYT = useMemo(
+        () => streamUrlEarly.includes("youtube.com/embed") || streamUrlEarly.includes("youtu.be/"),
+        [streamUrlEarly],
+    );
 
-    // ----- player helpers -----
-    const seekAndPlay = (seg: ShadowingSegment) => {
+    // Stable refs so the YT poll callback always sees fresh state without
+    // forcing a re-mount on every change.
+    const segmentsRef = useRef<ShadowingSegment[]>(segments);
+    segmentsRef.current = segments;
+    const currentIdxRef = useRef(currentIdx);
+    currentIdxRef.current = currentIdx;
+    const autoPauseRef = useRef(autoPause);
+    autoPauseRef.current = autoPause;
+    const loopRef = useRef(loop);
+    loopRef.current = loop;
+    const speedRef = useRef(speed);
+    speedRef.current = speed;
+
+    const onYTTick = useCallback((t: number, _state: number) => {
+        const segs = segmentsRef.current;
+        if (segs.length === 0) return;
+        const idx = currentIdxRef.current;
+        const seg = segs[Math.min(idx, segs.length - 1)];
+        if (!seg) return;
+
+        // Auto-advance the highlight when the user lets the video play through.
+        const matchIdx = segs.findIndex((s) => t >= s.startTime && t < s.endTime);
+        if (matchIdx >= 0 && matchIdx !== idx) {
+            setCurrentIdx(matchIdx);
+        }
+
+        if (t >= seg.endTime) {
+            if (loopRef.current) {
+                yt.seekTo(seg.startTime, true);
+            } else if (autoPauseRef.current) {
+                yt.pause();
+            }
+        }
+    }, []);
+
+    const yt = useYouTubePlayer({
+        videoId: useYT ? clipYTId : "",
+        onTick: useYT ? onYTTick : undefined,
+        onReady: () => {
+            // Apply current speed on ready.
+            yt.setRate(speedRef.current);
+        },
+    });
+
+    // Apply speed when the user changes it.
+    useEffect(() => {
+        if (useYT) {
+            yt.setRate(speed);
+        }
+        if (videoRef.current) videoRef.current.playbackRate = speed;
+    }, [speed, useYT, yt]);
+
+    // Native <video> auto-stop / loop handler — only used when the source is
+    // a direct media file (kept for backward compatibility with MinIO mp4).
+    const seekAndPlayVideo = (seg: ShadowingSegment) => {
         const v = videoRef.current;
         if (!v) return;
         v.currentTime = seg.startTime;
-        v.playbackRate = speed;
+        v.playbackRate = speedRef.current;
         void v.play().catch(() => {});
         const onTick = () => {
             if (!v) return;
             if (v.currentTime >= seg.endTime) {
-                if (loop) {
+                if (loopRef.current) {
                     v.currentTime = seg.startTime;
                     void v.play().catch(() => {});
                     return;
                 }
-                if (autoPause) {
+                if (autoPauseRef.current) {
                     v.pause();
                     v.removeEventListener("timeupdate", onTick);
                 }
@@ -140,7 +204,15 @@ export default function ShadowingDetailPage() {
         try {
             await saveShadowingProgress(clipId, idx, time, []);
         } catch {
-            /* fail silently - never block playback */
+            /* fail silently */
+        }
+    };
+
+    const seekToSegment = (seg: ShadowingSegment) => {
+        if (useYT) {
+            yt.seekTo(seg.startTime, true);
+        } else {
+            seekAndPlayVideo(seg);
         }
     };
 
@@ -149,14 +221,21 @@ export default function ShadowingDetailPage() {
         const next = Math.max(0, Math.min(segments.length - 1, idx));
         setCurrentIdx(next);
         const seg = segments[next];
-        if (seg) seekAndPlay(seg);
+        if (seg) seekToSegment(seg);
         void persistProgress(next, seg?.startTime || 0);
     };
 
-    const onPrev = () => jumpTo(currentIdx - 1);
-    const onNext = () => jumpTo(currentIdx + 1);
-    const onReplay = () => currentSeg && seekAndPlay(currentSeg);
+    const onPrev = () => jumpTo(currentIdxRef.current - 1);
+    const onNext = () => jumpTo(currentIdxRef.current + 1);
+    const onReplay = () => {
+        const seg = segmentsRef.current[currentIdxRef.current];
+        if (seg) seekToSegment(seg);
+    };
     const onPlayPause = () => {
+        if (useYT) {
+            yt.toggle();
+            return;
+        }
         const v = videoRef.current;
         if (!v) return;
         if (v.paused) void v.play().catch(() => {});
@@ -179,7 +258,7 @@ export default function ShadowingDetailPage() {
         window.addEventListener("keydown", onKey);
         return () => window.removeEventListener("keydown", onKey);
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [currentIdx, segments.length]);
+    }, [useYT]);
 
     // Cached translation toggle.
     const fetchTranslation = async (seg: ShadowingSegment) => {
@@ -260,13 +339,20 @@ export default function ShadowingDetailPage() {
 
     // ---- Resolve video source ----
     //
-    // Order of preference:
-    //   1. clip.streamUrl  → server returns a presigned MinIO URL.
-    //   2. proxy stream via backend (works whenever MinIO is reachable to the
-    //      backend, regardless of CORS or network visibility to the browser).
-    //   3. youtube.com/embed (no shadow-able timing but at least playable).
+    // YouTube embed URL is the default. We only switch to <video> when the
+    // streamUrl is clearly a direct media file (mp4 / webm) — for now nothing
+    // serves these in the live flow, but the branch keeps things forward-
+    // compatible with the legacy MinIO upload path.
     const clip = detail?.clip;
-    const usingEmbed = !clip?.minioObjectKey;
+    const streamUrl = clip?.streamUrl || "";
+    const isYouTubeEmbed = useMemo(
+        () => streamUrl.includes("youtube.com/embed") || streamUrl.includes("youtu.be/"),
+        [streamUrl],
+    );
+    const isDirectMedia = useMemo(
+        () => /\.(mp4|webm|m4a|mp3)(\?|$)/i.test(streamUrl) || !!clip?.minioObjectKey,
+        [streamUrl, clip?.minioObjectKey],
+    );
     const proxySrc = useMemo(() => {
         if (!clip?.proxyStreamUrl) return "";
         const base = API_BASE_URL.replace(/\/$/, "");
@@ -275,15 +361,34 @@ export default function ShadowingDetailPage() {
         return `${base}${path}${token}`;
     }, [clip?.proxyStreamUrl, accessToken]);
 
-    const directSrc = clip?.streamUrl || "";
-    const videoSrc = videoSrcError ? proxySrc : (directSrc || proxySrc);
+    const videoSrc = videoSrcError ? proxySrc : streamUrl || proxySrc;
 
     // ---- Status branch ----
+    // The clip itself is "ready" the instant we hand back the YouTube embed
+    // URL. transcriptStatus is what actually gates the practice flow.
     const status = clip?.status;
+    const transcriptStatus = clip?.transcriptStatus || (segments.length > 0 ? "ready" : "pending");
     const segmentsReady = segments.length > 0;
-    const isReady = status === "ready" && segmentsReady;
-    const isProcessing = !isReady && !loadError && status !== "failed";
     const failed = status === "failed";
+    const transcriptFailed = transcriptStatus === "failed";
+    const transcriptProcessing = transcriptStatus === "processing" || transcriptStatus === "pending";
+    const isReady = status === "ready" && segmentsReady;
+    const videoReady = !!(isYouTubeEmbed || videoSrc); // we always have at least one playable source
+    const isProcessing = !isReady && !loadError && !failed && !transcriptFailed;
+
+    const [retrying, setRetrying] = useState(false);
+    const onRetryTranscript = async () => {
+        if (!clipId) return;
+        setRetrying(true);
+        try {
+            await retryShadowingClip(clipId);
+            // The poller will pick up the new state automatically.
+        } catch {
+            /* ignore — error surfaces on next poll */
+        } finally {
+            setRetrying(false);
+        }
+    };
 
     return (
         <div className="min-h-screen bg-slate-950 text-white pb-28">
@@ -334,7 +439,7 @@ export default function ShadowingDetailPage() {
                         <div className="space-y-4">
                             {/* Video */}
                             <div className="aspect-video rounded-2xl overflow-hidden bg-black shadow-xl ring-1 ring-slate-800 relative">
-                                {isProcessing && !directSrc && !proxySrc && (
+                                {!videoReady && (
                                     <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-6">
                                         <div className="w-10 h-10 border-2 border-amber-400 border-t-transparent rounded-full animate-spin mb-3" />
                                         <p className="text-sm text-amber-200">Video is still processing…</p>
@@ -342,16 +447,16 @@ export default function ShadowingDetailPage() {
                                     </div>
                                 )}
 
-                                {usingEmbed && clip?.youtubeId && (
-                                    <iframe
-                                        src={`https://www.youtube.com/embed/${clip.youtubeId}`}
-                                        className="w-full h-full"
-                                        allow="autoplay; encrypted-media"
-                                        allowFullScreen
-                                    />
+                                {isYouTubeEmbed && (
+                                    // The hook replaces this div with a real
+                                    // YT.Player iframe once the IFrame API is
+                                    // loaded — that's the only way to drive
+                                    // seekTo / play / pause / playbackRate
+                                    // from JS.
+                                    <div ref={yt.containerRef} className="w-full h-full" />
                                 )}
 
-                                {!usingEmbed && videoSrc && (
+                                {!isYouTubeEmbed && isDirectMedia && videoSrc && (
                                     <video
                                         ref={videoRef}
                                         src={videoSrc}
@@ -359,18 +464,41 @@ export default function ShadowingDetailPage() {
                                         playsInline
                                         className="w-full h-full"
                                         onError={() => {
-                                            // If the presigned URL failed, fall back to the proxy.
                                             if (!videoSrcError && proxySrc) setVideoSrcError(true);
                                         }}
                                     />
                                 )}
 
-                                {!usingEmbed && !videoSrc && (
+                                {!isYouTubeEmbed && !isDirectMedia && videoSrc && (
                                     <div className="absolute inset-0 flex items-center justify-center text-sm text-slate-300">
                                         Video file found, waiting for playable URL…
                                     </div>
                                 )}
                             </div>
+
+                            {/* Transcript retry banner */}
+                            {transcriptFailed && (
+                                <div className="rounded-2xl bg-amber-500/10 border border-amber-500/30 p-4 flex items-center justify-between gap-3">
+                                    <div className="text-sm">
+                                        <div className="text-amber-200 font-medium">Transcript generation failed</div>
+                                        <div className="text-xs text-amber-200/70 mt-1">
+                                            {clip?.errorMessage || "You can retry — playback is still available."}
+                                        </div>
+                                    </div>
+                                    <button
+                                        onClick={onRetryTranscript}
+                                        disabled={retrying}
+                                        className="px-3 py-2 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-900 text-sm font-semibold disabled:opacity-50"
+                                    >
+                                        {retrying ? "Retrying…" : "Retry transcript"}
+                                    </button>
+                                </div>
+                            )}
+                            {!transcriptFailed && transcriptProcessing && !segmentsReady && (
+                                <div className="rounded-2xl bg-slate-900/60 border border-slate-800 p-3 text-xs text-slate-400 text-center">
+                                    Gemini is generating sentence-aligned transcript + Thai translation…
+                                </div>
+                            )}
 
                             {/* Practice sentence card */}
                             {isReady && currentSeg ? (
@@ -534,8 +662,23 @@ export default function ShadowingDetailPage() {
                                 )}
                             </div>
                             {!segmentsReady && (
-                                <div className="p-6 text-center text-sm text-slate-400">
-                                    {isProcessing ? "Generating transcript…" : "No transcript yet."}
+                                <div className="p-6 text-center text-sm text-slate-400 space-y-2">
+                                    <div>
+                                        {transcriptFailed
+                                            ? "Transcript generation failed."
+                                            : transcriptProcessing
+                                            ? "Generating transcript…"
+                                            : "No transcript yet."}
+                                    </div>
+                                    {transcriptFailed && (
+                                        <button
+                                            onClick={onRetryTranscript}
+                                            disabled={retrying}
+                                            className="px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-900 text-xs font-semibold disabled:opacity-50"
+                                        >
+                                            {retrying ? "Retrying…" : "Retry"}
+                                        </button>
+                                    )}
                                 </div>
                             )}
                             <div>
