@@ -128,6 +128,9 @@ export default function Review({
           <span className="pill neutral">
             {item.kind === "vocabulary" ? "คำและวลี" : "จากสิ่งที่เคยติดขัด"}
           </span>
+          <span className="eyebrow">
+            {item.title || "ลองพูดในสถานการณ์นี้"}
+          </span>
           <h2>{item.prompt}</h2>
           <p>ลองพูดให้สื่อความหมายนี้ ด้วยประโยคของคุณ</p>
           {reveal && (
@@ -139,7 +142,14 @@ export default function Review({
           )}
           <button
             className="text-button"
-            onClick={async () => {try {await post(`/review/${item.id}/hint`,{});setReveal(true)}catch(e){setError((e as Error).message)}}}
+            onClick={async () => {
+              try {
+                await post(`/review/${item.id}/hint`, {});
+                setReveal(true);
+              } catch (e) {
+                setError((e as Error).message);
+              }
+            }}
             disabled={busy || recording}
           >
             <Lightbulb size={17} /> เปิดตัวช่วย (ยังไม่เลื่อนช่วงทบทวน)
@@ -190,7 +200,8 @@ export default function Review({
                 className="button primary"
                 onClick={() => {
                   if (result.feedback.correct && result.rescheduled) {
-                    setIndex(index + 1);setReveal(false);
+                    setIndex(index + 1);
+                    setReveal(false);
                   }
                   setResult(undefined);
                   setText("");

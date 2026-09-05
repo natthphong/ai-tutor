@@ -597,6 +597,10 @@ export interface components {
             }[];
             completed?: boolean;
             independent_successes?: number;
+            studied?: boolean;
+            active_session_id?: string | null;
+            grammar_focus?: string;
+            source_units?: number[];
         };
         Scenario: {
             id: string;
@@ -684,6 +688,7 @@ export interface components {
             stage: number;
             failures: number;
             due_at: string;
+            title?: string;
         };
         Usage: {
             spent: number;
@@ -712,7 +717,9 @@ export interface components {
             weaknesses: {
                 prompt: string;
                 failures: number;
+                title?: string;
             }[];
+            total_lessons?: number;
         };
         DailyPlan: {
             lesson: components["schemas"]["Lesson"] | null;
@@ -2631,6 +2638,18 @@ export interface operations {
             };
         };
         responses: {
+            /** @description Resume the existing active lesson without resetting history */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        id: string;
+                        resumed?: boolean;
+                    };
+                };
+            };
             /** @description Success */
             201: {
                 headers: {

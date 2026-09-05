@@ -549,9 +549,9 @@ function Today({
           <span>
             <strong>
               {progress?.completed_lessons || 0}
-              <small> / 100</small>
+              <small> / {progress?.total_lessons || "—"}</small>
             </strong>
-            <label>บทเรียนที่พูดได้เอง</label>
+            <label>บทเรียนที่เรียนจบแล้ว</label>
           </span>
         </div>
         <div>
@@ -712,40 +712,55 @@ function Curriculum({
       </div>
       <ErrorMessage message={error} />
       {!lessons.length && !error && <Loading />}
-      {[1, 2, 3, 4].map((unit) => {
-        const rows = lessons.filter(
-          (l) => l.level === level && l.unit === unit,
-        );
-        return (
-          <section className="unit-section" key={unit}>
-            <SectionTitle
-              label={`UNIT ${unit.toString().padStart(2, "0")}`}
-              title={rows[0]?.unit_title || ""}
-            />
-            <div className="lesson-list">
-              {rows.map((l, i) => (
-                <button
-                  className={`lesson-row ${l.completed ? "complete" : ""}`}
-                  key={l.id}
-                  onClick={() => setSelected(l)}
-                >
-                  <span className="lesson-number">
-                    {l.completed ? <Check size={20} /> : i + 1}
-                  </span>
-                  <span className="lesson-row-copy">
-                    <strong>{l.title}</strong>
-                    <small>{l.pattern}</small>
-                  </span>
+      {[...new Set(lessons.filter((l) => l.level === level).map((l) => l.unit))]
+        .sort((a, b) => a - b)
+        .map((unit) => {
+          const rows = lessons.filter(
+            (l) => l.level === level && l.unit === unit,
+          );
+          return (
+            <section className="unit-section" key={unit}>
+              <SectionTitle
+                label={`UNIT ${unit.toString().padStart(2, "0")}`}
+                title={rows[0]?.unit_title || ""}
+                action={
                   <span className="pill neutral">
-                    {l.completed ? "พูดได้เองแล้ว" : "10–15 นาที"}
+                    เรียนแล้ว{" "}
+                    {rows.filter((l) => l.studied || l.completed).length}/
+                    {rows.length} บท
                   </span>
-                  <ChevronRight size={19} />
-                </button>
-              ))}
-            </div>
-          </section>
-        );
-      })}
+                }
+              />
+              <div className="lesson-list">
+                {rows.map((l, i) => (
+                  <button
+                    className={`lesson-row ${l.studied || l.completed ? "complete" : ""}`}
+                    key={l.id}
+                    onClick={() => setSelected(l)}
+                  >
+                    <span className="lesson-number">
+                      {l.studied || l.completed ? <Check size={20} /> : i + 1}
+                    </span>
+                    <span className="lesson-row-copy">
+                      <strong>{l.title}</strong>
+                      <small>{l.pattern}</small>
+                    </span>
+                    <span className="pill neutral">
+                      {l.active_session_id
+                        ? "กำลังเรียน · ฝึกต่อ"
+                        : l.completed
+                          ? "พูดได้เองแล้ว"
+                          : l.studied
+                            ? "เรียนแล้ว · ทบทวนได้"
+                            : "ยังไม่ได้เรียน"}
+                    </span>
+                    <ChevronRight size={19} />
+                  </button>
+                ))}
+              </div>
+            </section>
+          );
+        })}
       {selected && (
         <div className="modal-backdrop" onClick={() => setSelected(undefined)}>
           <div
@@ -779,11 +794,22 @@ function Curriculum({
               />
             </div>
             <p>{selected.explanation}</p>
+            {selected.grammar_focus && (
+              <p className="pill purple">Grammar: {selected.grammar_focus}</p>
+            )}
+            {(selected.studied || selected.completed) && (
+              <p>เคยเรียนบทนี้แล้ว กลับมาฝึกซ้ำได้โดยประวัติเดิมยังอยู่</p>
+            )}
             <button
               className="button primary wide"
               onClick={() => start("lesson", selected.id)}
             >
-              เริ่มฝึกบทนี้ <ArrowRight size={18} />
+              {selected.active_session_id
+                ? "ฝึกต่อจากที่ค้างไว้"
+                : selected.studied || selected.completed
+                  ? "เรียนซ้ำอีกครั้ง"
+                  : "เริ่มฝึกบทนี้"}{" "}
+              <ArrowRight size={18} />
             </button>
           </div>
         </div>
@@ -1235,8 +1261,8 @@ function LibraryPage({ user }: { user: User }) {
             <div className="lesson-row" key={m.id}>
               <RotateCcw size={20} />
               <div className="lesson-row-copy">
-                <strong>{m.prompt}</strong>
-                <small>{m.target}</small>
+                <strong>{m.title || "ทบทวนการสื่อสาร"}</strong>
+                <small>{m.prompt}</small>
               </div>
               <span className="pill neutral">
                 ทบทวน {new Date(m.due_at).toLocaleDateString("th-TH")}
@@ -1266,7 +1292,7 @@ function ProgressPage({ progress: p }: { progress?: Progress }) {
       <div className="metric-grid">
         {[
           [Mic, p.speaking_minutes, "นาทีที่ฝึกพูด"],
-          [BookOpen, p.completed_lessons, "บทที่พูดได้เอง"],
+          [BookOpen, p.completed_lessons, "บทที่เรียนจบแล้ว"],
           [Flame, p.streak, "วันต่อเนื่อง"],
           [Sparkles, p.active_vocabulary, "คำที่ใช้เองได้"],
         ].map(([Icon, value, label], i) => {
@@ -1331,7 +1357,10 @@ function ProgressPage({ progress: p }: { progress?: Progress }) {
               <span className="stat-icon orange">
                 <Target size={20} />
               </span>
-              <strong>{w.prompt}</strong>
+              <div className="lesson-row-copy">
+                <strong>{w.title || "ทบทวนการสื่อสาร"}</strong>
+                <small>{w.prompt}</small>
+              </div>
               <span className="pill neutral">พบ {w.failures} ครั้ง</span>
             </div>
           ))}

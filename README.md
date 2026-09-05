@@ -9,7 +9,7 @@
 
 สมัครด้วย username, password และ invitation ใช้ครั้งเดียวจาก admin (หมดอายุ 7 วัน) → เลือกเริ่มจากศูนย์หรือ placement → เปิดบทเรียน → ฟัง pattern → ฝึกเสียง 4 แบบ → รับ feedback / retry → สนทนาในบริบทใหม่ → ทบทวนและดู progress
 
-มี 100 บท (5 ระดับ × 20) และ 70 ฉาก (50 ฉากงาน + 20 Everyday) พร้อมคลังศัพท์ 200 รายการตามบท คำใบ้ idea → keyword → pattern → sentence, custom scenario ที่แก้ก่อนเล่นได้, review scheduler, Live audio, ประวัติเสียง, เป้าหมาย/งบและ admin invitations การพิมพ์ไม่เพิ่ม speaking mastery
+มี 525 บท (Pre-A1/A1 ระดับละ 45 บท และ A2/B1/B2 ระดับละ 145 บท) และ 70 ฉาก (50 ฉากงาน + 20 Everyday) พร้อมคลังศัพท์ตามบท คำใบ้ idea → keyword → pattern → sentence, custom scenario ที่แก้ก่อนเล่นได้, review scheduler, Live audio, ประวัติเสียง, เป้าหมาย/งบและ admin invitations การพิมพ์ไม่เพิ่ม speaking mastery
 
 ระดับใช้จัดความยากภายในแอป ไม่ใช่การรับรอง CEFR หรือรับประกันความคล่องจากจำนวนบทเรียน
 
@@ -58,3 +58,23 @@ push branch `main` ใช้ Git integration ของ Vercel; ทางเล�
 ยังไม่ได้รับรอง mic permission, Bluetooth, Safari autoplay, lock screen และ interruption บน iPhone/iPad จริง ภาพข้างต้นเป็น responsive viewport บน browser ทดสอบ เสียง QA เป็น synthetic fixture ไม่ใช่หลักฐานความแม่นยำ pronunciation สำหรับผู้เรียนไทย หลักสูตรยังควรปรับจากผลการฝึกจริง โดยเฉพาะพื้นฐานตัวเลข/ราคาและ cumulative assessment
 
 PWA เก็บเฉพาะ assets ที่จำเป็น ไม่รองรับบทเรียน AI offline; ไม่มี YouTube import, ข่าวสด หรือ push notifications ตามขอบเขตที่ตกลง
+
+
+## อัปเดต 6 กันยายน 2026: เรียนต่อและทบทวน
+
+แยก **เรียนจบแล้ว** ออกจาก **พูดได้เอง**: เมื่อกดจบหลังมีคำตอบ บทนั้นจะแสดงว่าเรียนแล้วและแผนวันนี้เลือกบทถัดไป แม้ยังใช้คำใบ้/พิมพ์อยู่ การพิมพ์และคำใบ้ยังไม่นับเป็น speaking mastery
+
+เปิดบทที่ค้างจากหลักสูตรหรือวันนี้จะใช้ session เดิมพร้อมประวัติ ไม่สร้างใหม่ ส่วนบทที่จบแล้วกลับมาเรียนซ้ำได้ การเดินหลักสูตรเป็นบทที่ 1 → 2 → 3 ภายใน Unit และข้าม Unit เมื่อครบ 5 บท หน้าหลักสูตรแสดงจำนวนบทที่เรียนแล้วต่อ Unit
+
+การ์ดทบทวนมีหัวข้อภาษาไทยและโจทย์สถานการณ์ ระบุสิ่งที่ต้องสื่อและอนุญาตรายละเอียด/ถ้อยคำอื่นที่ถูกต้อง เปลี่ยนการ์ดเดิมโดยเก็บ ID, วันทบทวน, stage และประวัติไว้ คำตอบตัวอย่างเปิดเมื่อขอตัวช่วย
+
+ทดสอบเฉพาะ feature เรียนต่อ/จบบทโดย Terra high: `TestLessonResume` ผ่าน ใช้ fake Gemini ไม่มีค่า AI ครอบคลุม completion, idempotency, resume/session/turn preservation, login persistence, replay, legacy history และ owner isolation ดู backend `docs/qa-resume.md` รอบนี้ไม่ได้ทดสอบเสียง/Live/ทุกบทซ้ำ
+
+
+### หลักสูตรที่เพิ่ม
+
+คง 100 บทเดิมและเพิ่ม 425 บท: A2/B1/B2 เพิ่มบทใช้จริงระดับละ 20 Unit × 5 บท พร้อม grammar อีกระดับละ 5 Unit × 5 บททุกระดับ รวมเป็น Pre-A1/A1 ระดับละ 9 Unit และ A2/B1/B2 ระดับละ 29 Unit เน้นทั้งชีวิตประจำวันและงานโดยแต่ละบทมีเป้าหมายต่างกัน
+
+Grammar ครอบคลุม 12 tense forms และหัวข้อ common จาก *English Grammar in Use* ใน PDF ที่ผู้ใช้ให้ อ้างอิงหมายเลข Unit ตามหัวข้อ โดยเขียนตัวอย่าง/คำอธิบาย/แบบฝึกใหม่ทั้งหมด Future perfect continuous เป็นบทเสริมสำหรับบริบทจำกัด ไม่ใช่รูปแบบที่ต้องใช้บ่อย
+
+Content generator และแผนที่หัวข้อ: backend `scripts/expand_curriculum.py`, `docs/curriculum-expansion.md` บทเดิมและประวัติผู้ใช้ไม่ถูกล้าง รูปภาพ happy flow ด้านบนเป็นหลักฐานจาก release วันที่ 5 กันยายน ก่อนการเพิ่มหลักสูตรครั้งนี้

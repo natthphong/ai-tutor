@@ -367,8 +367,8 @@ export default function Practice({
               <strong>{s.summary?.mastered ? "✓" : "↗"}</strong>
               <span>
                 {s.summary?.mastered
-                  ? "ผ่านเป้าหมายบทเรียน"
-                  : "ยังฝึกต่อได้อีก"}
+                  ? "พูดได้เองตามเกณฑ์"
+                  : s.mode === "lesson" ? "เรียนแล้ว · กลับมาฝึกซ้ำได้" : "ยังฝึกต่อได้อีก"}
               </span>
             </div>
           </div>
