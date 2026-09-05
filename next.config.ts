@@ -1,16 +1,22 @@
-import path from "path";
 import type { NextConfig } from "next";
-
-const nextConfig: NextConfig = {
-    turbopack: {
-        root: __dirname,
-    },
-    webpack: (config) => {
-        config.resolve = config.resolve || {};
-        config.resolve.alias = config.resolve.alias || {};
-        config.resolve.alias["promptpay-qr"] = path.resolve(__dirname, "src/vendor/promptpay-qr.ts");
-        return config;
-    },
+const config: NextConfig = {
+  poweredByHeader: false,
+  turbopack: { root: __dirname },
+  async headers() {
+    return [
+      {
+        source: "/(.*)",
+        headers: [
+          {
+            key: "X-Toko-Release",
+            value: process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 12) || "local",
+          },
+          { key: "X-Content-Type-Options", value: "nosniff" },
+          { key: "Referrer-Policy", value: "same-origin" },
+          { key: "Permissions-Policy", value: "microphone=(self), camera=()" },
+        ],
+      },
+    ];
+  },
 };
-
-export default nextConfig;
+export default config;

@@ -37,3 +37,16 @@ go_backend/goapp
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Toko Loop local runtime
+.env*
+!.env.example
+.toko-*
+data/
+coverage/
+playwright-report/
+test-results/
+
+__pycache__/
+*.pyc
+*.tsbuildinfo

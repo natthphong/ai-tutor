@@ -1,0 +1,15 @@
+import type { components } from "@/generated/api";
+export type Profile = components["schemas"]["Profile"];
+export type User = components["schemas"]["User"];
+export type Word = components["schemas"]["Word"];
+export type Lesson = components["schemas"]["Lesson"];
+export type Scenario = components["schemas"]["Scenario"];
+export type Feedback = components["schemas"]["Feedback"];
+export type Attempt = components["schemas"]["Attempt"];
+export type Turn = components["schemas"]["Turn"];
+export type Session = components["schemas"]["Session"];
+export type SessionData = components["schemas"]["SessionData"];
+export type ReviewItem = components["schemas"]["ReviewItem"];
+export type Usage = components["schemas"]["Usage"];
+export type Progress = components["schemas"]["Progress"];
+export type DailyPlan = components["schemas"]["DailyPlan"];
