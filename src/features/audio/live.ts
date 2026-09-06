@@ -1,6 +1,7 @@
 import { post } from "@/lib/api";
 type Event = {
   ready?: boolean;
+  transcript?: {input: string; output: string};
   seconds_remaining?: number;
   error?: string;
   ended?: string;

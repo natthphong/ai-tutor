@@ -43,6 +43,7 @@ import type {
 } from "@/lib/types";
 import Auth, { ChangePassword } from "./Auth";
 import Practice from "./Practice";
+import DailyMeet from "./DailyMeet";
 import Review from "./Review";
 import SettingsPage from "./Settings";
 import {
@@ -60,11 +61,13 @@ type View =
   | "library"
   | "progress"
   | "settings"
-  | "review";
+  | "review"
+  | "daily-meet";
 const nav = [
   { id: "today", label: "วันนี้", en: "Today", icon: House },
   { id: "curriculum", label: "หลักสูตร", en: "Learn", icon: BookOpen },
   { id: "practice", label: "ฝึกพูด", en: "Speak", icon: Mic },
+  { id: "daily-meet", label: "Daily Meet", en: "My daily", icon: MessagesSquare },
   { id: "library", label: "คลังของฉัน", en: "My collection", icon: Library },
   {
     id: "progress",
@@ -322,6 +325,7 @@ export default function TutorApp() {
               {view === "practice" && (
                 <PracticeHome user={user} start={start} resume={openSession} />
               )}
+              {view === "daily-meet" && <DailyMeet user={user} resume={openSession} />}
               {view === "library" && <LibraryPage user={user} />}
               {view === "progress" && <ProgressPage progress={progress} />}{" "}
               {view === "settings" && (
@@ -870,6 +874,7 @@ function PracticeHome({
         <p>ไม่มีคำตอบที่ต้องสมบูรณ์แบบ มีแต่โอกาสได้ลองอีกครั้ง</p>
       </div>
       <div className="practice-options">
+        <button className="practice-option yellow" onClick={()=>start("listening")}><Headphones size={29}/><h2>ฟังก่อน แล้วค่อยตอบ</h2><p>ฟัง 3 รอบ: ไม่มีคำพูด → เห็นบางคำ → เฉลย · เข้าใจแล้วตอบได้ทันที</p><span>เริ่ม Free speak with listening <ArrowRight size={18}/></span></button>
         <button
           className="practice-option yellow"
           onClick={() => start("free")}

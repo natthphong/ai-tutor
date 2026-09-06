@@ -13,3 +13,6 @@ export type ReviewItem = components["schemas"]["ReviewItem"];
 export type Usage = components["schemas"]["Usage"];
 export type Progress = components["schemas"]["Progress"];
 export type DailyPlan = components["schemas"]["DailyPlan"];
+
+export type DailyEntry = components["schemas"]["DailyMeet"];
+export type ListenResult = components["schemas"]["ListenResult"];

@@ -3571,3 +3571,22 @@ audio {
 .reply-player audio { max-width: 100%; }
 .turn-translation { margin: 8px 0; }
 .turn-translation p { border-left: 2px solid #dcc669; padding-left: 12px; color: #646952; }
+
+.sentence-builder { padding: 18px; margin: 20px 0; border: 1px solid #e8e4d6; border-radius: 18px; background: #fffdf6; }
+.sentence-builder label, .daily-editor label { display: grid; gap: 8px; margin: 12px 0; }
+.sentence-builder input, .daily-editor input, .daily-editor textarea { padding: 12px; border: 1px solid #dddace; border-radius: 10px; background: white; width: 100%; font: inherit; }
+.sentence-builder blockquote { margin: 18px 0; font-size: 21px; }
+.listening-card { padding: 28px; text-align: center; }
+.listening-card audio { display: block; max-width: 100%; margin: 18px auto; }
+.listening-caption { padding: 20px; margin: 16px 0; background: #fff7d4; border-radius: 16px; line-height: 1.8; }
+.listening-hidden { padding: 28px 12px; color: #777b6c; }
+.daily-editor { padding: 24px; margin: 24px 0; }
+.daily-columns { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.daily-phrases { margin: 24px 0; }
+.daily-phrases > div { padding: 14px 0; border-bottom: 1px solid #e9e7df; }
+.daily-list { display: grid; gap: 16px; margin: 24px 0; }
+.daily-entry { padding: 22px; text-align: left; cursor: pointer; }
+.daily-entry > span { display: block; color: #7b806c; margin-bottom: 8px; }
+.daily-entry > strong { font-size: 20px; }
+.preserve-lines { white-space: pre-wrap; }
+@media(max-width:700px) { .daily-columns { grid-template-columns: 1fr; gap: 0; } .bottom-nav button > span { font-size: 10px; } .listening-card,.daily-editor { padding: 18px; } }

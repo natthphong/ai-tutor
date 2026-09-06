@@ -23,6 +23,7 @@ import { api, post } from "@/lib/api";
 import type { SessionData, User, Feedback, Attempt, Turn } from "@/lib/types";
 import { VoiceRecorder } from "@/features/audio/recorder";
 import { LiveVoice } from "@/features/audio/live";
+import ListeningPractice from "./ListeningPractice";
 import { Mascot, Loading, ErrorMessage, VoiceButton } from "./ui";
 export default function Practice({
   id,
@@ -194,7 +195,7 @@ export default function Practice({
     try {
       const h = await post<{ level: number; text: string }>(
         `/sessions/${id}/hints`,
-        { idea: hintIdea },
+        { idea: hintIdea, request_id: crypto.randomUUID() },
       );
       setHint(h.text);
       await load();
@@ -218,13 +219,16 @@ export default function Practice({
             setRemaining(event.seconds_remaining || 600);
             setLiveStatus("พร้อมฟังคุณแล้ว");
           }
-          if (event.serverContent?.inputTranscription) {
+          if (event.transcript) {
+            setLiveInput(event.transcript.input);setLiveOutput(event.transcript.output);
+          }
+          if (!event.transcript && event.serverContent?.inputTranscription) {
             setLiveInput(
               (t) => t + event.serverContent!.inputTranscription!.text,
             );
             setLiveStatus("กำลังฟัง");
           }
-          if (event.serverContent?.outputTranscription) {
+          if (!event.transcript && event.serverContent?.outputTranscription) {
             setLiveOutput(
               (t) => t + event.serverContent!.outputTranscription!.text,
             );
@@ -290,6 +294,7 @@ export default function Practice({
         <ErrorMessage message={error} />
       </>
     );
+  if (data.session.mode === "listening") return <ListeningPractice id={id} user={user} data={data} reload={load} onBack={onBack} />;
   const { session: s, lesson: l, attempts } = data;
   const last = attempts.at(-1);
   const feedback = manualFeedback || last?.feedback;
@@ -338,7 +343,7 @@ export default function Practice({
                 : "YOUR NEXT CONVERSATION"}
           </span>
           <h1>
-            {l.title ||
+            {l.title || s.state.daily_title ||
               (s.mode === "placement"
                 ? "ลองเล่าเรื่องของคุณ"
                 : isLiveMode
@@ -353,7 +358,7 @@ export default function Practice({
         <div className="session-steps">
           {[
             ["pattern", "เรียน pattern"],
-            ["drill", "ฝึกให้คล่อง"],
+            ...(s.state.lesson_flow === "guided-v2" ? [] : [["drill", "ฝึกให้คล่อง"]]),
             ["conversation", "ใช้ในบทสนทนา"],
           ].map(([step, label], i) => (
             <div key={step} className={s.state.stage === step ? "active" : ""}>
@@ -367,7 +372,7 @@ export default function Practice({
         <div className="card lesson-progress">
           <div className="lesson-progress-heading"><strong>ความคืบหน้าการฝึกบทนี้</strong><strong>{s.progress.percent}%</strong></div>
           <div className="lesson-progress-track" role="progressbar" aria-label="ความคืบหน้าการฝึกบทนี้" aria-valuenow={s.progress.percent} aria-valuemin={0} aria-valuemax={100}><div style={{width: `${s.progress.percent}%`}} /></div>
-          <p>ฝึก {s.progress.completed_drills}/{s.progress.total_drills} แบบ · พูดเองในบริบทใหม่ {s.progress.independent_conversations}/{s.progress.required_conversations} ครั้ง</p>
+          <p>{s.progress.total_drills > 0 && <>ฝึก {s.progress.completed_drills}/{s.progress.total_drills} แบบ · </>}พูดเองในบริบทใหม่ {s.progress.independent_conversations}/{s.progress.required_conversations} ครั้ง</p>
           <small>{s.progress.ready_to_complete ? "พูดได้เองครบเกณฑ์แล้ว เก็บผลและจบบทให้แล้ว" : completeStatus ? "คุณเลือกจบก่อนครบเกณฑ์ กลับมาฝึกซ้ำได้เสมอ" : "เมื่อครบเกณฑ์จะจบบทให้อัตโนมัติ หรือกดจบการฝึกก่อนได้ · ถ้ายังไม่จบ กลับมาเรียนต่อจากจุดนี้ได้"}</small>
         </div>
       )}
@@ -457,6 +462,7 @@ export default function Practice({
                     speed={user.profile.speed}
                   />
                 </div>
+                <SentenceBuilder pattern={l.pattern} example={l.example} />
                 <div className="tip-note">
                   <Lightbulb size={20} />
                   <span>ฟังความหมายก่อน แล้วลองพูดด้วยข้อมูลของคุณเอง</span>
@@ -472,6 +478,7 @@ export default function Practice({
             ) : (
               <>
                 <div className="chat-scroll">
+                  {s.state.lesson_flow === "guided-v2" && <div className="drill-instruction"><span className="eyebrow">SPEAK IT YOUR WAY</span><h3>{(s.state.independent || 0) === 0 ? "รอบแรก: ใช้ pattern นี้เล่าเรื่องของคุณ" : "รอบสอง: ลองคุยในสถานการณ์ใหม่ เพิ่มอีกหนึ่งรายละเอียด"}</h3><p>{l.pattern}</p><small>พูดสั้น ๆ ได้ ไม่ต้องตรงกับตัวอย่างทุกคำ · กดตัวช่วยได้เสมอ</small></div>}
                   {s.state.stage === "drill" && drill && (
                     <div className="drill-instruction">
                       <span className="eyebrow">
@@ -871,4 +878,12 @@ function TurnTranslation({turn, sessionId}: {turn: Turn; sessionId: string}) {
     finally {setPending(false);}
   }
   return <div className="turn-translation"><button className="text-button" aria-expanded={open} onClick={()=>void toggle()} disabled={pending}>{pending ? "กำลังแปล…" : open ? "ซ่อนคำแปล" : "แปลไทย"}</button>{open && thai && <p lang="th">{thai}</p>}{error && <small role="alert">{error}</small>}</div>;
+}
+
+function SentenceBuilder({pattern, example}: {pattern:string; example:string}) {
+  const slots = Array.from(new Set(pattern.match(/\[[^\]]+\]/g) || []));
+  const [values,setValues]=useState<Record<string,string>>({});
+  const [own,setOwn]=useState("");
+  const preview=slots.reduce((text,slot)=>text.split(slot).join(values[slot] || slot),pattern);
+  return <div className="sentence-builder"><h3>ลองแต่งประโยคของคุณ</h3><p>แทนคำในช่องว่างด้วยเรื่องจริงของคุณ แล้วลองพูดโดยไม่อ่าน</p>{slots.length ? slots.map(slot=><label key={slot}>{slot.slice(1,-1)}<input value={values[slot]||""} onChange={e=>setValues({...values,[slot]:e.target.value})} placeholder={slot.slice(1,-1)} maxLength={120}/></label>) : <label>ประโยคของฉัน<input value={own} onChange={e=>setOwn(e.target.value)} placeholder={example} maxLength={300}/></label>}<blockquote>{slots.length ? preview : own || example}</blockquote><small>เพิ่มให้ยาวขึ้นทีละนิด: ชื่อ → สิ่งที่ทำ → สถานที่หรือเหตุผล · ข้อความร่างนี้ยังไม่นับเป็นการพูด</small></div>;
 }
