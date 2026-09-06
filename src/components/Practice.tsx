@@ -20,7 +20,7 @@ import {
   X,
 } from "lucide-react";
 import { api, post } from "@/lib/api";
-import type { SessionData, User, Feedback, Attempt } from "@/lib/types";
+import type { SessionData, User, Feedback, Attempt, Turn } from "@/lib/types";
 import { VoiceRecorder } from "@/features/audio/recorder";
 import { LiveVoice } from "@/features/audio/live";
 import { Mascot, Loading, ErrorMessage, VoiceButton } from "./ui";
@@ -53,6 +53,16 @@ export default function Practice({
   const [showText, setShowText] = useState(false);
   const [hintIdea, setHintIdea] = useState("");
   const [manualFeedback, setManualFeedback] = useState<Feedback>();
+  const [replyAudio, setReplyAudio] = useState("");
+  const [audioNotice, setAudioNotice] = useState("");
+  const replyPlayer = useRef<HTMLAudioElement>(null);
+  const stopReply = () => replyPlayer.current?.pause();
+  useEffect(() => {
+    if (!replyAudio || !replyPlayer.current) return;
+    replyPlayer.current.playbackRate = user.profile.speed || 1;
+    if (document.hidden) return;
+    void replyPlayer.current.play().catch(() => setAudioNotice("แตะปุ่มเล่นด้านล่างเพื่อฟังคำตอบ"));
+  }, [replyAudio, user.profile.speed]);
   const recorder = useRef(new VoiceRecorder());
   const liveRef = useRef<LiveVoice | undefined>(undefined);
   const chatEnd = useRef<HTMLDivElement>(null);
@@ -69,6 +79,7 @@ export default function Practice({
     void load();
     const onVisibility = () => {
       if (document.hidden) {
+        replyPlayer.current?.pause();
         recorder.current.cancel();
         setRecording(false);
         liveRef.current?.stop();
@@ -79,6 +90,7 @@ export default function Practice({
     };
     document.addEventListener("visibilitychange", onVisibility);
     return () => {
+      replyPlayer.current?.pause();
       recorder.current.cancel();
       liveRef.current?.stop();
       document.removeEventListener("visibilitychange", onVisibility);
@@ -99,11 +111,12 @@ export default function Practice({
   }, [data?.turns.length, liveOutput]);
   async function send(blob?: Blob) {
     if (busy) return;
+    stopReply();
     setBusy(true);
     setError("");
     try {
       const requestId = crypto.randomUUID();
-      let result: { id: string; feedback: Feedback };
+      let result: { id: string; feedback: Feedback; reply_audio_id?: string; audio_error?: string };
       if (blob) {
         const form = new FormData();
         form.set("audio", blob, "speech");
@@ -120,6 +133,8 @@ export default function Practice({
           retry_of: retry,
         });
       }
+      setAudioNotice(result.audio_error || "");
+      setReplyAudio(result.reply_audio_id || "");
       setManualFeedback(result.feedback);
       setText("");
       setRetry("");
@@ -142,6 +157,7 @@ export default function Practice({
     }
   }
   async function record() {
+    stopReply();
     setError("");
     setMicNotice("");
     if (recording) {
@@ -157,6 +173,7 @@ export default function Practice({
     }
   }
   async function advance() {
+    stopReply();
     setBusy(true);
     setError("");
     try {
@@ -188,6 +205,7 @@ export default function Practice({
     }
   }
   async function startLive() {
+    stopReply();
     setConnecting(true);
     setError("");
     setLiveStatus("กำลังเชื่อมต่อ");
@@ -254,6 +272,16 @@ export default function Practice({
     } finally {
       setBusy(false);
     }
+  }
+  async function changeAutoAudio(enabled: boolean) {
+    setBusy(true);
+    setError("");
+    if (!enabled) stopReply();
+    try {
+      await api(`/sessions/${id}/settings`, { method: "PATCH", body: JSON.stringify({auto_audio: enabled}) });
+      await load();
+    } catch (e) { setError((e as Error).message); }
+    finally { setBusy(false); }
   }
   if (!data)
     return (
@@ -335,7 +363,18 @@ export default function Practice({
           ))}
         </div>
       )}
+      {s.progress && (
+        <div className="card lesson-progress">
+          <div className="lesson-progress-heading"><strong>ความคืบหน้าการฝึกบทนี้</strong><strong>{s.progress.percent}%</strong></div>
+          <div className="lesson-progress-track" role="progressbar" aria-label="ความคืบหน้าการฝึกบทนี้" aria-valuenow={s.progress.percent} aria-valuemin={0} aria-valuemax={100}><div style={{width: `${s.progress.percent}%`}} /></div>
+          <p>ฝึก {s.progress.completed_drills}/{s.progress.total_drills} แบบ · พูดเองในบริบทใหม่ {s.progress.independent_conversations}/{s.progress.required_conversations} ครั้ง</p>
+          <small>{s.progress.ready_to_complete ? "พูดได้เองครบเกณฑ์แล้ว เก็บผลและจบบทให้แล้ว" : completeStatus ? "คุณเลือกจบก่อนครบเกณฑ์ กลับมาฝึกซ้ำได้เสมอ" : "เมื่อครบเกณฑ์จะจบบทให้อัตโนมัติ หรือกดจบการฝึกก่อนได้ · ถ้ายังไม่จบ กลับมาเรียนต่อจากจุดนี้ได้"}</small>
+        </div>
+      )}
+      {!isLiveMode && !completeStatus && <label className="card auto-audio-setting"><input type="checkbox" checked={!!s.state.auto_audio} onChange={(e)=>void changeAutoAudio(e.target.checked)} disabled={busy || recording} /><span><strong>ฟังเสียงตอบของ Loop อัตโนมัติ</strong><small>สร้างเสียงภาษาอังกฤษพร้อมคำตอบ อาจรอเพิ่มเล็กน้อยและใช้โควตาเสียง</small></span></label>}
       <ErrorMessage message={error} />
+      {audioNotice && <div className="notice" role="status">{audioNotice}</div>}
+      {replyAudio && <div className="card reply-player"><span>คำตอบล่าสุดของ Loop</span><audio ref={replyPlayer} controls src={`/api/audio/${replyAudio}`} preload="auto" onError={()=>setAudioNotice("โหลดเสียงไม่สำเร็จ ลองกดเล่นอีกครั้งได้ คำตอบถูกบันทึกแล้ว")} /></div>}
       {micNotice && (
         <div className="notice">
           {micNotice}
@@ -460,9 +499,12 @@ export default function Practice({
                       )}
                       <div className="bubble">
                         <p>{t.text}</p>
+                        {t.role === "model" && <TurnTranslation turn={t} sessionId={id} />}
                         {t.audio_id ? (
                           <audio
                             controls
+                            onPlay={stopReply}
+                            onLoadedMetadata={(e)=>{e.currentTarget.playbackRate=user.profile.speed || 1;}}
                             src={`/api/audio/${t.audio_id}`}
                             preload="none"
                           />
@@ -497,7 +539,7 @@ export default function Practice({
                     <div className="thinking">
                       <span />
                       <span />
-                      <span /> Loop กำลังคิด
+                      <span /> {s.state.auto_audio ? "Loop กำลังคิดและเตรียมเสียง…" : "Loop กำลังคิด…"}
                     </div>
                   )}
                   <div ref={chatEnd} />
@@ -812,4 +854,21 @@ export function FeedbackCard({
       )}
     </div>
   );
+}
+
+function TurnTranslation({turn, sessionId}: {turn: Turn; sessionId: string}) {
+  const [open, setOpen] = useState(false);
+  const [thai, setThai] = useState(turn.text_th || "");
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState("");
+  async function toggle() {
+    if (open) {setOpen(false); return;}
+    setOpen(true);
+    if (thai) return;
+    setPending(true); setError("");
+    try {const result=await post<{text_th:string}>(`/sessions/${sessionId}/turns/${turn.id}/translate`, {});setThai(result.text_th);}
+    catch(e) {setError((e as Error).message);setOpen(false);}
+    finally {setPending(false);}
+  }
+  return <div className="turn-translation"><button className="text-button" aria-expanded={open} onClick={()=>void toggle()} disabled={pending}>{pending ? "กำลังแปล…" : open ? "ซ่อนคำแปล" : "แปลไทย"}</button>{open && thai && <p lang="th">{thai}</p>}{error && <small role="alert">{error}</small>}</div>;
 }

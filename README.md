@@ -3,7 +3,7 @@
 เว็บฝึกพูดภาษาอังกฤษสำหรับผู้เรียนไทย จากเริ่มต้นไปสู่ชีวิตประจำวันและการประชุม Tech / Banking / Business / Interview / Meeting
 
 **Production:** https://ai-tutor-sooty-two.vercel.app  
-**Backend:** https://toko-api.tarcloud.win/ai-tutor/api/v2
+**Backend API:** https://api.example.com/ai-tutor/api/v2
 
 ## ใช้งาน
 
@@ -22,7 +22,7 @@ npm run dev
 npm run verify
 ```
 
-ตั้ง `NEXT_PUBLIC_BACKEND_BASE_URL` เป็น URL รวม namespace เช่น `https://toko-api.tarcloud.win/ai-tutor/api/v2` ใน Vercel Production (และ Preview ถ้าต้องการ) ค่า URL เป็นข้อมูลสาธารณะ ห้ามใส่ Gemini key ใน frontend ตัว browser เรียก `/api` ผ่าน Next.js BFF ซึ่งเก็บ session cookie แบบ HttpOnly เพื่อรองรับ Safari และ backend คนละ domain
+ตั้ง `NEXT_PUBLIC_BACKEND_BASE_URL` เป็น URL รวม namespace เช่น `https://api.example.com/ai-tutor/api/v2` ใน Vercel Production (และ Preview ถ้าต้องการ) ค่า URL เป็นข้อมูลสาธารณะ ห้ามใส่ Gemini key ใน frontend ตัว browser เรียก `/api` ผ่าน Next.js BFF ซึ่งเก็บ session cookie แบบ HttpOnly เพื่อรองรับ Safari และ backend คนละ domain
 
 push branch `main` ใช้ Git integration ของ Vercel; ทางเลือก `scripts/deploy.sh` ใช้ project IDs/token จาก environment ไม่มี auto commit/push ใน script Backend repo แยกเป็น `../backend` และใช้ `deploy_local.sh` พร้อม readiness/rollback
 
@@ -78,3 +78,15 @@ PWA เก็บเฉพาะ assets ที่จำเป็น ไม่ร�
 Grammar ครอบคลุม 12 tense forms และหัวข้อ common จาก *English Grammar in Use* ใน PDF ที่ผู้ใช้ให้ อ้างอิงหมายเลข Unit ตามหัวข้อ โดยเขียนตัวอย่าง/คำอธิบาย/แบบฝึกใหม่ทั้งหมด Future perfect continuous เป็นบทเสริมสำหรับบริบทจำกัด ไม่ใช่รูปแบบที่ต้องใช้บ่อย
 
 Content generator และแผนที่หัวข้อ: backend `scripts/expand_curriculum.py`, `docs/curriculum-expansion.md` บทเดิมและประวัติผู้ใช้ไม่ถูกล้าง รูปภาพ happy flow ด้านบนเป็นหลักฐานจาก release วันที่ 5 กันยายน ก่อนการเพิ่มหลักสูตรครั้งนี้
+
+## ฟีเจอร์ใหม่: cache, session และเสียง
+
+รายละเอียด API ฉบับเต็มอยู่ที่ backend `contracts/openapi.json`; คำอธิบายการใช้งานและ compatibility อยู่ใน `../backend/docs/new-features.md`
+
+- ข้อมูลส่วนตัวจาก curriculum, daily plan, library และ progress มี cache รายผู้ใช้และถูกล้างหลังข้อมูลที่เกี่ยวข้องเปลี่ยนแปลง โดย auth จะไม่ถูก cache
+- Session บทเรียนมี progress สำหรับ 4 drills และ 2 independent conversations; เมื่อทำครบจะจบอัตโนมัติ แต่ปุ่มจบเองและการกลับมาเรียนต่อใน session ที่ค้างยังคงใช้ได้
+- `auto_audio` เป็นตัวเลือกตอนสร้าง session (ค่าเริ่มต้น `false`) และเปลี่ยนได้ที่ `PATCH /sessions/{id}/settings`; ถ้ากลับเข้า session เดิมโดยไม่ส่งค่า จะเก็บค่าที่บันทึกไว้
+- AI ตอบภาษาอังกฤษและ `reply_th` จากการประเมินครั้งเดียว แล้วส่ง `reply_audio_id` เมื่อเลือก auto-audio; client เล่นด้วยความเร็วที่ผู้เรียนเลือก และยังมีปุ่มเล่นเองเมื่อ Safari ปิด autoplay หรือสร้างเสียงไม่สำเร็จ
+- Frontend ยังคงเรียก backend ผ่าน `/api` BFF และเก็บ session ใน HttpOnly cookie; อย่าส่ง token หรือ credential ไปที่ browser
+
+Backend tests ผ่านแล้ว และ frontend typecheck, 6 tests, และ production build ผ่าน การ deploy ยังรอผลยืนยัน

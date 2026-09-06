@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-export const maxDuration = 60;
+export const maxDuration = 90;
 const COOKIE = "toko_session";
 async function proxy(
   request: NextRequest,
@@ -41,7 +41,7 @@ async function proxy(
           ? undefined
           : await request.arrayBuffer(),
         cache: "no-store",
-        signal: AbortSignal.timeout(55000),
+        signal: AbortSignal.timeout(80000),
         redirect: "error",
       },
     );

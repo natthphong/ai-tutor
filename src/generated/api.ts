@@ -549,6 +549,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/sessions/{id}/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["patch_session_settings"];
+        trace?: never;
+    };
+    "/sessions/{id}/turns/{turnID}/translate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["translate_session_turn"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -633,6 +665,8 @@ export interface components {
             weaknesses: string[];
             vocabulary: string[];
             level: string;
+            /** @description Thai translation of the English reply; optional for historical feedback. */
+            reply_th?: string;
         };
         Attempt: {
             id: string;
@@ -643,12 +677,15 @@ export interface components {
             audio_id?: string | null;
             retry_of?: string | null;
             duration_seconds: number;
+            reply_audio_id?: string | null;
+            reply_audio_error?: string;
         };
         Turn: {
             id: string;
             role: "user" | "model";
             text: string;
             audio_id?: string | null;
+            text_th?: string;
         };
         Session: {
             id: string;
@@ -663,6 +700,8 @@ export interface components {
                 last_pass: boolean;
                 independent: number;
                 live_active: boolean;
+                /** @default false */
+                auto_audio: boolean;
             };
             summary?: {
                 attempts: number;
@@ -672,6 +711,7 @@ export interface components {
                 level?: string;
                 feedback?: components["schemas"]["Feedback"];
             } | null;
+            progress?: components["schemas"]["LessonProgress"] | null;
         };
         SessionData: {
             session: components["schemas"]["Session"];
@@ -748,6 +788,8 @@ export interface components {
             last_pass?: boolean;
             independent?: number;
             live_active?: boolean;
+            /** @default false */
+            auto_audio: boolean;
         };
         Job: {
             id: string;
@@ -770,6 +812,10 @@ export interface components {
             audio_id?: string | null;
             independent?: boolean;
             state?: components["schemas"]["SessionState"];
+            reply_audio_id?: string | null;
+            audio_error?: string;
+            progress?: components["schemas"]["LessonProgress"] | null;
+            session_completed?: boolean;
         };
         ReviewResult: {
             feedback: components["schemas"]["Feedback"];
@@ -803,6 +849,14 @@ export interface components {
             text: string;
             retry_of?: string;
             hint_level?: components["schemas"]["HintLevel"];
+        };
+        LessonProgress: {
+            percent: number;
+            completed_drills: number;
+            total_drills: number;
+            independent_conversations: number;
+            required_conversations: number;
+            ready_to_complete: boolean;
         };
     };
     responses: never;
@@ -2634,6 +2688,8 @@ export interface operations {
                     mode: "lesson" | "free" | "scenario" | "live" | "placement";
                     lesson_id?: string;
                     scenario_id?: string;
+                    /** @description Optional; omission preserves an active session preference. New sessions default false. */
+                    auto_audio?: boolean;
                 };
             };
         };
@@ -4311,6 +4367,205 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    patch_session_settings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    auto_audio: boolean;
+                };
+            };
+        };
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        auto_audio: boolean;
+                    };
+                };
+            };
+            /** @description Invalid input */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Login required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Budget exceeded */
+            402: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Rate limited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Gemini unavailable */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    translate_session_turn: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                turnID: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        text_th: string;
+                    };
+                };
+            };
+            /** @description Invalid input */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Login required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Budget exceeded */
+            402: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Rate limited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Gemini unavailable */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
             };
         };
     };

@@ -3557,3 +3557,17 @@ audio {
 /* Keep settings reachable on short desktop and tablet windows. */
 .sidebar{overflow-y:auto}.sidebar-bottom{flex-shrink:0}.sidebar nav{flex-shrink:0}
 @media(max-height:850px){.sidebar-bottom .mini-coach{display:none}.sidebar-bottom{padding-top:12px}}
+
+.lesson-progress { padding: 18px 22px; margin: 14px 0; }
+.lesson-progress-heading { display: flex; justify-content: space-between; gap: 12px; }
+.lesson-progress-track { height: 9px; background: #efefeb; border-radius: 99px; overflow: hidden; margin: 12px 0; }
+.lesson-progress-track > div { height: 100%; background: #55cc6c; border-radius: inherit; transition: width .4s ease; }
+.lesson-progress p { margin: 8px 0; }
+.lesson-progress small, .auto-audio-setting small { color: #757965; line-height: 1.6; }
+.auto-audio-setting { display: flex; gap: 12px; align-items: center; padding: 16px 22px; margin: 14px 0; cursor: pointer; }
+.auto-audio-setting input { width: 22px; height: 22px; flex-shrink: 0; accent-color: #cfa422; }
+.auto-audio-setting span, .auto-audio-setting small { display: block; }
+.reply-player { padding: 14px 20px; display: flex; flex-wrap: wrap; align-items: center; gap: 14px; margin: 14px 0; }
+.reply-player audio { max-width: 100%; }
+.turn-translation { margin: 8px 0; }
+.turn-translation p { border-left: 2px solid #dcc669; padding-left: 12px; color: #646952; }
