@@ -44,6 +44,7 @@ import type {
 import Auth, { ChangePassword } from "./Auth";
 import Practice from "./Practice";
 import DailyMeet from "./DailyMeet";
+import LearnEbook from "./LearnEbook";
 import Review from "./Review";
 import SettingsPage from "./Settings";
 import {
@@ -62,9 +63,11 @@ type View =
   | "progress"
   | "settings"
   | "review"
-  | "daily-meet";
+  | "daily-meet"
+ | "ebook";
 const nav = [
   { id: "today", label: "วันนี้", en: "Today", icon: House },
+  { id: "ebook", label: "Learn Ebook", en: "Grammar book", icon: BookOpen },
   { id: "curriculum", label: "หลักสูตร", en: "Learn", icon: BookOpen },
   { id: "practice", label: "ฝึกพูด", en: "Speak", icon: Mic },
   { id: "daily-meet", label: "Daily Meet", en: "My daily", icon: MessagesSquare },
@@ -304,7 +307,7 @@ export default function TutorApp() {
               onResume={openSession}
               user={user}
               onBack={() => {
-                go("today");
+                go(new URLSearchParams(location.search).get("from") === "ebook" ? "ebook" : "today");
                 void reload();
               }}
             />
@@ -325,6 +328,7 @@ export default function TutorApp() {
               {view === "practice" && (
                 <PracticeHome user={user} start={start} resume={openSession} />
               )}
+              {view === "ebook" && <LearnEbook user={user} resume={(id) => {openSession(id);history.replaceState({}, "", `/?view=practice&session=${id}&from=ebook`)}} review={() => go("review")} />}
               {view === "daily-meet" && <DailyMeet user={user} resume={openSession} />}
               {view === "library" && <LibraryPage user={user} />}
               {view === "progress" && <ProgressPage progress={progress} />}{" "}

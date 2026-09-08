@@ -645,6 +645,134 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/ebook": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get_ebook_catalog"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ebook/pages/{page}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get_ebook_page"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ebook/units/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get_ebook_unit"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ebook/units/{id}/prepare": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["prepare_ebook_unit"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ebook/units/{id}/progress": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["save_ebook_progress"];
+        trace?: never;
+    };
+    "/ebook/units/{id}/check": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["check_ebook_answers"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ebook/units/{id}/reveal": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["reveal_ebook_answers"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ebook/units/{id}/sessions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["start_ebook_session"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -769,6 +897,10 @@ export interface components {
                 lesson_flow?: string;
                 daily_title?: string;
                 daily_meet_id?: string;
+                ebook_unit_id?: string;
+                ebook_version?: string;
+                /** @enum {string} */
+                ebook_skill?: "speak" | "listening";
                 listening_successes?: number;
                 listening_understood?: boolean;
                 listen_count?: number;
@@ -864,6 +996,10 @@ export interface components {
             lesson_flow?: string;
             daily_title?: string;
             daily_meet_id?: string;
+            ebook_unit_id?: string;
+            ebook_version?: string;
+            /** @enum {string} */
+            ebook_skill?: "speak" | "listening";
             listening_successes?: number;
             listening_understood?: boolean;
             listen_count?: number;
@@ -942,6 +1078,115 @@ export interface components {
             listen_count: number;
             caption: string;
             translation: string;
+        };
+        EbookSection: {
+            id: string;
+            item_ids: string[];
+        };
+        EbookUnit: {
+            id: string;
+            number: number;
+            title: string;
+            lesson_page: number;
+            exercise_page: number;
+            answer_pages: number[];
+            sections: components["schemas"]["EbookSection"][];
+        };
+        EbookOption: {
+            id: string;
+            text: string;
+        };
+        EbookQuestion: {
+            id: string;
+            /** @enum {string} */
+            kind: "write" | "match" | "choice";
+            prompt: string;
+            instruction_th: string;
+            options: components["schemas"]["EbookOption"][];
+            answers?: string[];
+            open: boolean;
+            example: boolean;
+        };
+        EbookPack: {
+            explanation_th: string;
+            questions: components["schemas"]["EbookQuestion"][];
+            vocabulary: components["schemas"]["Word"][];
+            pattern: string;
+            speaking_prompt: string;
+            speaking_th: string;
+            listening_prompt: string;
+            listening_th: string;
+        };
+        EbookCatalog: {
+            title: string;
+            version: string;
+            page_count: number;
+            units: components["schemas"]["EbookUnit"][];
+            progress: {
+                [key: string]: unknown;
+            };
+            cursor?: {
+                [key: string]: unknown;
+            };
+        };
+        EbookUnitData: {
+            unit: components["schemas"]["EbookUnit"];
+            /** @enum {string} */
+            status: "not_prepared" | "queued" | "running" | "ready" | "failed";
+            pack?: components["schemas"]["EbookPack"] | null;
+            progress: {
+                [key: string]: unknown;
+            };
+            version: string;
+        };
+        EbookPrepare: {
+            /** @enum {string} */
+            status: "queued" | "ready";
+        };
+        EbookProgressUpdate: {
+            page: number;
+            answers?: {
+                [key: string]: string;
+            };
+        };
+        EbookSaved: {
+            saved: boolean;
+        };
+        EbookCheckRequest: {
+            /** Format: uuid */
+            request_id: string;
+            answers: {
+                [key: string]: string;
+            };
+        };
+        EbookMark: {
+            id: string;
+            correct: boolean;
+            reason_th: string;
+            answer: string;
+        };
+        EbookCheckResult: {
+            marks: components["schemas"]["EbookMark"][];
+            correct: number;
+            total: number;
+            progress: {
+                [key: string]: unknown;
+            };
+        };
+        EbookRevealRequest: {
+            ids: string[];
+        };
+        EbookRevealResult: {
+            [key: string]: {
+                answers: string[];
+                explanation_th: string;
+            };
+        };
+        EbookSessionRequest: {
+            /** @enum {string} */
+            mode: "speak" | "listening";
+            /** Format: uuid */
+            request_id: string;
         };
         DailyMeet: {
             id: string;
@@ -2785,7 +3030,7 @@ export interface operations {
             content: {
                 "application/json": {
                     /** @enum {string} */
-                    mode: "lesson" | "free" | "scenario" | "live" | "placement" | "listening";
+                    mode: "lesson" | "free" | "scenario" | "live" | "placement" | "listening" | "ebook";
                     lesson_id?: string;
                     scenario_id?: string;
                     /** @description Optional; omission preserves an active session preference. New sessions default false. */
@@ -5165,6 +5410,444 @@ export interface operations {
             };
             /** @description Gemini unavailable */
             502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    get_ebook_catalog: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EbookCatalog"];
+                };
+            };
+            /** @description Login required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Ebook unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    get_ebook_page: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                page: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Private textbook page */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "image/jpeg": string;
+                };
+            };
+            /** @description Login required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Page not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Page unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    get_ebook_unit: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EbookUnitData"];
+                };
+            };
+            /** @description Login required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Unit not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    prepare_ebook_unit: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Already prepared or queued */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EbookPrepare"];
+                };
+            };
+            /** @description Preparation queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EbookPrepare"];
+                };
+            };
+            /** @description Login required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Unit not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    save_ebook_progress: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EbookProgressUpdate"];
+            };
+        };
+        responses: {
+            /** @description Saved */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EbookSaved"];
+                };
+            };
+            /** @description Invalid input */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Login required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Unit not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    check_ebook_answers: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EbookCheckRequest"];
+            };
+        };
+        responses: {
+            /** @description Marked answers */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EbookCheckResult"];
+                };
+            };
+            /** @description Invalid input */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Login required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description AI budget exhausted; no evaluation saved */
+            402: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unit not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Unit not prepared */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Provider or schema failure; no evaluation saved */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    reveal_ebook_answers: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EbookRevealRequest"];
+            };
+        };
+        responses: {
+            /** @description Requested answers */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EbookRevealResult"];
+                };
+            };
+            /** @description Invalid input */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Login required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Unit not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Unit not prepared */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    start_ebook_session: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EbookSessionRequest"];
+            };
+        };
+        responses: {
+            /** @description Idempotent existing session */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ID"];
+                };
+            };
+            /** @description Session created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ID"];
+                };
+            };
+            /** @description Invalid input */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Login required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Unit not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Unit not prepared */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };

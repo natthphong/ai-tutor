@@ -616,7 +616,7 @@ export default function Practice({
                         className={`mic-button ${recording ? "recording" : ""}`}
                         onClick={record}
                         disabled={
-                          busy || (s.state.last_pass && !!l.id && !retry)
+                          busy || (s.state.last_pass && (!!l.id || s.mode === "ebook") && !retry)
                         }
                         aria-label={
                           recording ? "หยุดและส่งเสียง" : "เริ่มอัดเสียง"
@@ -655,7 +655,7 @@ export default function Practice({
                       </button>
                     </div>
                     <label className="audio-upload">ใช้เสียงที่อัดไว้
-                      <input type="file" accept="audio/*" aria-label="เลือกไฟล์เสียงที่อัดไว้" disabled={busy || recording || (s.state.last_pass && !!l.id && !retry)} onChange={(e)=>{const file=e.target.files?.[0];if(file)void send(file);e.target.value="";}} />
+                      <input type="file" accept="audio/*" aria-label="เลือกไฟล์เสียงที่อัดไว้" disabled={busy || recording || (s.state.last_pass && (!!l.id || s.mode === "ebook") && !retry)} onChange={(e)=>{const file=e.target.files?.[0];if(file)void send(file);e.target.value="";}} />
                     </label>
                     {showText && (
                       <form
@@ -678,14 +678,14 @@ export default function Practice({
                             busy ||
                             !text.trim() ||
                             recording ||
-                            (s.state.last_pass && !!l.id && !retry)
+                            (s.state.last_pass && (!!l.id || s.mode === "ebook") && !retry)
                           }
                         >
                           <Send size={19} />
                         </button>
                       </form>
                     )}
-                    {s.state.last_pass && l.id && (
+                    {s.state.last_pass && (l.id || s.mode === "ebook") && (
                       <button
                         className="button primary wide next-drill"
                         onClick={advance}

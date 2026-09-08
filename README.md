@@ -15,11 +15,13 @@
 
 ## พัฒนาและ deploy
 
+ดูคำสั่งตรวจสอบซ้ำได้และบัญชี QA เฉพาะ local/test ที่ [docs/TESTING.md](docs/TESTING.md) ก่อนเริ่ม browser/API QA ห้ามนำ credential production มาใส่ fixture หรือ commit
+
 ```sh
 npm ci
 cp .env.example .env.local
 npm run dev
-npm run verify
+npm run validate
 ```
 
 ตั้ง `NEXT_PUBLIC_BACKEND_BASE_URL` เป็น URL รวม namespace เช่น `https://api.example.com/ai-tutor/api/v2` ใน Vercel Production (และ Preview ถ้าต้องการ) ค่า URL เป็นข้อมูลสาธารณะ ห้ามใส่ Gemini key ใน frontend ตัว browser เรียก `/api` ผ่าน Next.js BFF ซึ่งเก็บ session cookie แบบ HttpOnly เพื่อรองรับ Safari และ backend คนละ domain
@@ -79,14 +81,20 @@ Grammar ครอบคลุม 12 tense forms และหัวข้อ comm
 
 Content generator และแผนที่หัวข้อ: backend `scripts/expand_curriculum.py`, `docs/curriculum-expansion.md` บทเดิมและประวัติผู้ใช้ไม่ถูกล้าง รูปภาพ happy flow ด้านบนเป็นหลักฐานจาก release วันที่ 5 กันยายน ก่อนการเพิ่มหลักสูตรครั้งนี้
 
-## ฟีเจอร์ใหม่: cache, session และเสียง
+## ฟีเจอร์ใหม่: guided lesson, listening และ Daily Meet
 
-รายละเอียด API ฉบับเต็มอยู่ที่ backend `contracts/openapi.json`; คำอธิบายการใช้งานและ compatibility อยู่ใน `../backend/docs/new-features.md`
+รายละเอียด API ฉบับเต็มอยู่ที่ backend `contracts/openapi.json`; วิธีใช้และ compatibility อยู่ใน `../backend/docs/new-features.md`
 
-- ข้อมูลส่วนตัวจาก curriculum, daily plan, library และ progress มี cache รายผู้ใช้และถูกล้างหลังข้อมูลที่เกี่ยวข้องเปลี่ยนแปลง โดย auth จะไม่ถูก cache
-- Session บทเรียนมี progress สำหรับ 4 drills และ 2 independent conversations; เมื่อทำครบจะจบอัตโนมัติ แต่ปุ่มจบเองและการกลับมาเรียนต่อใน session ที่ค้างยังคงใช้ได้
-- `auto_audio` เป็นตัวเลือกตอนสร้าง session (ค่าเริ่มต้น `false`) และเปลี่ยนได้ที่ `PATCH /sessions/{id}/settings`; ถ้ากลับเข้า session เดิมโดยไม่ส่งค่า จะเก็บค่าที่บันทึกไว้
-- AI ตอบภาษาอังกฤษและ `reply_th` จากการประเมินครั้งเดียว แล้วส่ง `reply_audio_id` เมื่อเลือก auto-audio; client เล่นด้วยความเร็วที่ผู้เรียนเลือก และยังมีปุ่มเล่นเองเมื่อ Safari ปิด autoplay หรือสร้างเสียงไม่สำเร็จ
+- บทเรียนใหม่ใช้ pattern → เล่าเรื่องของตัวเอง → roleplay อีกบริบทหนึ่ง; สำเร็จสองรอบจบอัตโนมัติ ส่วน session เก่าที่ยังไม่มี `lesson_flow` ยังคง 4 drills เดิม
+- Hint ภาษาไทยรับได้สูงสุด 500 ตัวอักษร Unicode และใช้ `request_id` เดิมเพื่อรับผลเดิมโดยไม่ข้ามระดับเมื่อ helper ล้มเหลว
+- Listening เริ่มจากคำถามเสียงอังกฤษ ฟังครั้งที่ 1 ไม่มีข้อความ ครั้งที่ 2 มี caption บางส่วน และครั้งที่ 3 มี caption เต็มกับคำแปลไทย ผู้เรียนตอบได้ทุกครั้ง; การเข้าใจบริบทแยกจาก grammar และการพิมพ์ไม่นับ speaking mastery
+- Daily Meet เปลี่ยนบันทึกวันทำงานเป็น English/Thai, 3–6 phrases และคำถามต่อยอด แล้วเลือกฝึก free, Live หรือ listening ในบริบทบันทึกนั้น
 - Frontend ยังคงเรียก backend ผ่าน `/api` BFF และเก็บ session ใน HttpOnly cookie; อย่าส่ง token หรือ credential ไปที่ browser
 
-Backend tests ผ่านแล้ว และ frontend typecheck, 6 tests, และ production build ผ่าน การ deploy ยังรอผลยืนยัน
+Release `20260906-progress-voice-cache` ถูก deploy แล้วที่ backend `265e762` และ frontend `bda27a2`; `20260906-listening-daily-meet` ยังไม่ได้ deploy การทดสอบอัตโนมัติไม่ครอบคลุม mic permission, Bluetooth, backgrounding และ interruption บนอุปกรณ์จริง
+
+## Learn Ebook (pre-release)
+
+Learn Ebook ใช้หนังสือ private จำนวน 392 หน้า 145 units โดยภาพหน้าและเนื้อหาเรียกผ่าน `/api` BFF หลังยืนยันตัวตนเท่านั้น ต้นฉบับและ answer key ไม่อยู่ใน frontend หรือ Git
+
+เมื่อเปิด unit ระบบขอเตรียม worksheet ตามต้องการและใช้ผลร่วมกันตาม book version ผู้เรียนบันทึกหน้าที่อ่าน ตรวจ grammar แบบ retry-safe เปิดเฉลยหลังลองตอบ และเริ่มฝึกพูดหรือฟังจาก unit ได้ การฝึกพูดต้องผ่าน oral รอบอิสระ 2 รอบก่อนจบ โดย review เดิมยังใช้งานต่อได้ ฟีเจอร์นี้ยังไม่ได้ deploy

@@ -50,3 +50,5 @@ test-results/
 __pycache__/
 *.pyc
 *.tsbuildinfo
+
+.playwright-cli/
