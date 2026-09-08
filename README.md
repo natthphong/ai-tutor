@@ -91,10 +91,10 @@ Content generator และแผนที่หัวข้อ: backend `script
 - Daily Meet เปลี่ยนบันทึกวันทำงานเป็น English/Thai, 3–6 phrases และคำถามต่อยอด แล้วเลือกฝึก free, Live หรือ listening ในบริบทบันทึกนั้น
 - Frontend ยังคงเรียก backend ผ่าน `/api` BFF และเก็บ session ใน HttpOnly cookie; อย่าส่ง token หรือ credential ไปที่ browser
 
-Release `20260906-progress-voice-cache` ถูก deploy แล้วที่ backend `265e762` และ frontend `bda27a2`; `20260906-listening-daily-meet` ยังไม่ได้ deploy การทดสอบอัตโนมัติไม่ครอบคลุม mic permission, Bluetooth, backgrounding และ interruption บนอุปกรณ์จริง
+Release `20260906-progress-voice-cache` ถูก deploy แล้วที่ backend `265e762` และ frontend `bda27a2`; ฟีเจอร์ Listening/Daily Meet รวมอยู่ใน release `20260908-ebook` การทดสอบอัตโนมัติไม่ครอบคลุม mic permission, Bluetooth, backgrounding และ interruption บนอุปกรณ์จริง
 
-## Learn Ebook (pre-release)
+## Learn Ebook — release 20260908-ebook
 
 Learn Ebook ใช้หนังสือ private จำนวน 392 หน้า 145 units โดยภาพหน้าและเนื้อหาเรียกผ่าน `/api` BFF หลังยืนยันตัวตนเท่านั้น ต้นฉบับและ answer key ไม่อยู่ใน frontend หรือ Git
 
-เมื่อเปิด unit ระบบขอเตรียม worksheet ตามต้องการและใช้ผลร่วมกันตาม book version ผู้เรียนบันทึกหน้าที่อ่าน ตรวจ grammar แบบ retry-safe เปิดเฉลยหลังลองตอบ และเริ่มฝึกพูดหรือฟังจาก unit ได้ การฝึกพูดต้องผ่าน oral รอบอิสระ 2 รอบก่อนจบ โดย review เดิมยังใช้งานต่อได้ ฟีเจอร์นี้ยังไม่ได้ deploy
+เมื่อเปิด unit ระบบขอเตรียม worksheet ตามต้องการและใช้ผลร่วมกันตาม book version ผู้เรียนบันทึกหน้าที่อ่าน ตรวจ grammar แบบ retry-safe เปิดเฉลยหลังลองตอบ และเริ่มฝึกพูดหรือฟังจาก unit ได้ การฝึกพูดต้องผ่าน oral รอบอิสระ 2 รอบก่อนจบ โดย review เดิมยังใช้งานต่อได้ Backend release `20260908-ebook` ผ่าน migration/readiness และ HTTPS แล้ว; frontend ส่งผ่าน main
