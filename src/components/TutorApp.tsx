@@ -1,5 +1,4 @@
 "use client";
-import { client } from "@/lib/client";
 import { useEffect, useState, useCallback } from "react";
 import {
   BookOpen,
@@ -127,10 +126,8 @@ export default function TutorApp() {
   const [progress, setProgress] = useState<Progress>();
   const reload = useCallback(async () => {
     try {
-      const result = await client.GET("/auth/me");
-      if (result.error)
-        throw new ApiError(result.error.error, result.response.status);
-      setUser(result.data);
+      const result = await api<User>("/auth/me");
+      setUser(result);
       setVersion((v) => v + 1);
     } catch (e) {
       if (e instanceof ApiError && e.status === 401) setUser(null);

@@ -900,7 +900,7 @@ export interface components {
                 ebook_unit_id?: string;
                 ebook_version?: string;
                 /** @enum {string} */
-                ebook_skill?: "speak" | "listening";
+                ebook_skill?: "speak" | "shadowing" | "listening";
                 listening_successes?: number;
                 listening_understood?: boolean;
                 listen_count?: number;
@@ -999,7 +999,7 @@ export interface components {
             ebook_unit_id?: string;
             ebook_version?: string;
             /** @enum {string} */
-            ebook_skill?: "speak" | "listening";
+            ebook_skill?: "speak" | "shadowing" | "listening";
             listening_successes?: number;
             listening_understood?: boolean;
             listen_count?: number;
@@ -1078,6 +1078,13 @@ export interface components {
             listen_count: number;
             caption: string;
             translation: string;
+            target?: string;
+            sentence?: string;
+            text?: string;
+            thai?: string;
+            meaning_th?: string;
+            line?: number;
+            total?: number;
         };
         EbookSection: {
             id: string;
@@ -1092,6 +1099,71 @@ export interface components {
             answer_pages: number[];
             sections: components["schemas"]["EbookSection"][];
         };
+        /** @enum {string} */
+        EbookStatus: "unlearned" | "learning" | "learned" | "review";
+        /** @enum {string} */
+        EbookStep: "understand" | "examples" | "quiz" | "shadowing" | "speaking";
+        EbookOriginalBook: {
+            available: boolean;
+            unit_id?: string;
+            lesson_page?: number;
+            exercise_page?: number;
+            answer_pages?: number[];
+        };
+        EbookUnitSummary: {
+            id: string;
+            unit_id: string;
+            number: number;
+            title: string;
+            status: components["schemas"]["EbookStatus"];
+            percent: number;
+            current_step: number;
+            review_due: boolean;
+            original_book: components["schemas"]["EbookOriginalBook"];
+        };
+        EbookExample: {
+            en: string;
+            th: string;
+        };
+        EbookVocabulary: {
+            id: string;
+            term: string;
+            meaning_th: string;
+            example_en: string;
+            example_th: string;
+        };
+        EbookQuizItem: {
+            id: string;
+            /** @enum {string} */
+            kind: "choice" | "write";
+            prompt_en: string;
+            prompt_th: string;
+            options?: string[];
+        };
+        /** @description A verbatim English sentence from the lesson examples, selected for audio shadowing. */
+        EbookShadowLine: string;
+        EbookPracticeTask: {
+            prompt_en: string;
+            prompt_th: string;
+            target_vocabulary: string[];
+            success_criteria_th: string[];
+        };
+        EbookLesson: {
+            id: string;
+            unit_id: string;
+            ordinal: number;
+            title: string;
+            goal_th: string;
+            explanation_th: string;
+            pattern: string;
+            examples: components["schemas"]["EbookExample"][];
+            vocabulary: components["schemas"]["EbookVocabulary"][];
+            quiz: components["schemas"]["EbookQuizItem"][];
+            shadowing: components["schemas"]["EbookShadowLine"][];
+            speaking: components["schemas"]["EbookPracticeTask"];
+            listening: components["schemas"]["EbookPracticeTask"];
+            concept_tags?: string[];
+        };
         EbookOption: {
             id: string;
             text: string;
@@ -1104,11 +1176,19 @@ export interface components {
             instruction_th: string;
             options: components["schemas"]["EbookOption"][];
             answers?: string[];
-            open: boolean;
-            example: boolean;
+            open?: boolean;
+            example?: boolean;
         };
         EbookPack: {
             explanation_th: string;
+            explanation: string;
+            goal: string;
+            goal_th?: string;
+            examples: {
+                sentence: string;
+                meaning: string;
+                source_page?: number;
+            }[];
             questions: components["schemas"]["EbookQuestion"][];
             vocabulary: components["schemas"]["Word"][];
             pattern: string;
@@ -1116,21 +1196,52 @@ export interface components {
             speaking_th: string;
             listening_prompt: string;
             listening_th: string;
+            concept_steps?: {
+                id: string;
+                title: string;
+                /** @enum {string} */
+                status: "available" | "active" | "complete" | "locked";
+                quiz?: components["schemas"]["EbookQuestion"];
+            }[];
+            original_book?: Record<string, never>;
+            shadowing_sentences?: {
+                lesson_example: string;
+                source_page?: number;
+                meaning_th?: string;
+                sentence: string;
+                meaning: string;
+            }[];
+        };
+        EbookConceptStep: {
+            id: string;
+            title: string;
+            /** @enum {string} */
+            status: "available" | "active" | "complete" | "locked";
+            quiz?: components["schemas"]["EbookQuestion"];
+        };
+        EbookShadowSentence: {
+            lesson_example: string;
+            source_page?: number;
+            meaning_th?: string;
+            sentence: string;
+            meaning: string;
         };
         EbookCatalog: {
             title: string;
             version: string;
             page_count: number;
-            units: components["schemas"]["EbookUnit"][];
+            units: components["schemas"]["EbookUnitSummary"][];
             progress: {
                 [key: string]: unknown;
             };
             cursor?: {
                 [key: string]: unknown;
-            };
+            } | null;
         };
         EbookUnitData: {
-            unit: components["schemas"]["EbookUnit"];
+            unit: components["schemas"]["EbookUnit"] | components["schemas"]["EbookUnitSummary"] | null;
+            lesson?: components["schemas"]["EbookLesson"];
+            original_book?: components["schemas"]["EbookOriginalBook"];
             /** @enum {string} */
             status: "not_prepared" | "queued" | "running" | "ready" | "failed";
             pack?: components["schemas"]["EbookPack"] | null;
@@ -1144,13 +1255,63 @@ export interface components {
             status: "queued" | "ready";
         };
         EbookProgressUpdate: {
-            page: number;
+            page?: number;
             answers?: {
                 [key: string]: string;
             };
+            current_step?: number;
+            /**
+             * @description Self-paced step acknowledged by the learner. Assessed steps are advanced only by their dedicated endpoints.
+             * @enum {string}
+             */
+            completed_step?: "understand" | "examples";
+            /** @description Only understand/examples are client-settable. Quiz, shadowing, speaking, learned and completed_at are server-managed. */
+            completed_steps?: {
+                understand?: boolean;
+                examples?: boolean;
+            };
+            quiz_answers?: {
+                [key: string]: string;
+            };
+            vocabulary_saved?: {
+                [key: string]: boolean;
+            };
+            review_requested?: boolean;
         };
         EbookSaved: {
             saved: boolean;
+            progress?: components["schemas"]["EbookProgressState"];
+        };
+        EbookProgressState: {
+            current_step?: number;
+            completed_steps?: {
+                understand?: boolean;
+                examples?: boolean;
+                quiz?: boolean;
+                shadowing?: boolean;
+                speaking?: boolean;
+            };
+            quiz_answers?: {
+                [key: string]: string;
+            };
+            quiz_scores?: {
+                [key: string]: boolean;
+            };
+            vocabulary_saved?: {
+                [key: string]: boolean;
+            };
+            learned?: boolean;
+            /** Format: date-time */
+            completed_at?: string;
+            review_requested?: boolean;
+        };
+        EbookProgress: {
+            /** @enum {string} */
+            learning_state: "unlearned" | "learning" | "learned" | "review";
+            current_step: number;
+            completed_steps: components["schemas"]["EbookProgressState"]["completed_steps"];
+            percent: number;
+            review_due: boolean;
         };
         EbookCheckRequest: {
             /** Format: uuid */
@@ -1184,7 +1345,7 @@ export interface components {
         };
         EbookSessionRequest: {
             /** @enum {string} */
-            mode: "speak" | "listening";
+            mode: "speak" | "shadowing" | "listening";
             /** Format: uuid */
             request_id: string;
         };

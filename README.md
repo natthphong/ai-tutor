@@ -3,7 +3,6 @@
 เว็บฝึกพูดภาษาอังกฤษสำหรับผู้เรียนไทย จากเริ่มต้นไปสู่ชีวิตประจำวันและการประชุม Tech / Banking / Business / Interview / Meeting
 
 **Production:** https://ai-tutor-sooty-two.vercel.app  
-**Backend API:** https://api.example.com/ai-tutor/api/v2
 
 ## ใช้งาน
 
@@ -24,7 +23,11 @@ npm run dev
 npm run validate
 ```
 
-ตั้ง `NEXT_PUBLIC_BACKEND_BASE_URL` เป็น URL รวม namespace เช่น `https://api.example.com/ai-tutor/api/v2` ใน Vercel Production (และ Preview ถ้าต้องการ) ค่า URL เป็นข้อมูลสาธารณะ ห้ามใส่ Gemini key ใน frontend ตัว browser เรียก `/api` ผ่าน Next.js BFF ซึ่งเก็บ session cookie แบบ HttpOnly เพื่อรองรับ Safari และ backend คนละ domain
+ตั้ง `NEXT_PUBLIC_BACKEND_BASE_URL` เป็น deployed API base ที่กำหนดไว้ใน environment หรือ hosting configuration ของ Vercel Production (และ Preview ถ้าต้องการ) ค่า URL เป็นข้อมูลสาธารณะ ห้ามใส่ Gemini key ใน frontend ตัว browser เรียก `/api` ผ่าน Next.js BFF ซึ่งเก็บ session cookie แบบ HttpOnly เพื่อรองรับ Safari และ backend คนละ domain
+
+Browser GETs for `/auth/me`, `/curriculum`, `/daily-plan`, `/library`, `/ebook`, and `/ebook/units/:id` use a small in-memory cache only in the browser. The TTLs are 10s, 30s, 10s, 15s, 60s, and 60s respectively; concurrent requests for the same path share one in-flight request, and the cache keeps the most recent 64 entries. Mutations invalidate data reads when they settle, account mutations also clear `/auth/me`, and `401` responses clear private data. Server-side requests, dynamic session/job/audio routes, and `cache: "no-store"` requests bypass this cache.
+
+The contract test in `tests/ebook-redesign-contract.test.mjs` reads `../backend/contracts/openapi.json` when the sibling backend checkout is present, then falls back to `src/generated/openapi.json` for standalone frontend validation. Set `EBOOK_OPENAPI_PATH` when CI stores the contract elsewhere. `npm run validate` remains the complete frontend check: typecheck, unit tests, production build, and deterministic Playwright browser tests.
 
 push branch `main` ใช้ Git integration ของ Vercel; ทางเลือก `scripts/deploy.sh` ใช้ project IDs/token จาก environment ไม่มี auto commit/push ใน script Backend repo แยกเป็น `../backend` และใช้ `deploy_local.sh` พร้อม readiness/rollback
 
@@ -98,3 +101,20 @@ Release `20260906-progress-voice-cache` ถูก deploy แล้วที่ b
 Learn Ebook ใช้หนังสือ private จำนวน 392 หน้า 145 units โดยภาพหน้าและเนื้อหาเรียกผ่าน `/api` BFF หลังยืนยันตัวตนเท่านั้น ต้นฉบับและ answer key ไม่อยู่ใน frontend หรือ Git
 
 เมื่อเปิด unit ระบบขอเตรียม worksheet ตามต้องการและใช้ผลร่วมกันตาม book version ผู้เรียนบันทึกหน้าที่อ่าน ตรวจ grammar แบบ retry-safe เปิดเฉลยหลังลองตอบ และเริ่มฝึกพูดหรือฟังจาก unit ได้ การฝึกพูดต้องผ่าน oral รอบอิสระ 2 รอบก่อนจบ โดย review เดิมยังใช้งานต่อได้ Backend release `20260908-ebook` ผ่าน migration/readiness และ HTTPS แล้ว; frontend ส่งผ่าน main
+
+## Learn Ebook — current guided flow
+
+The current Learn Ebook screen keeps one short lesson in view: a cream and yellow Toko Loop shell with unit navigation on the left, the active lesson concept in the center, and Loop Coach with vocabulary on the right. Each unit is designed for 8–12 minutes and has five steps: Understand, Examples, Quick practice, Listen & shadow, and Use it. The center action bar keeps Explain, Practice, and Next available as the learner moves through the flow.
+
+Progress is shown as `unlearned`, `learning`, `learned`, or `review`. Draft answers, the current step, and self-paced step completion resume after reload. Quiz submissions contain only answered items; public choice IDs are converted to their option text before the request, and correctness feedback is rendered only from the check response. Vocabulary is capped at exactly ten lesson entries and reveals the additional entries with the vocabulary control. Original Book is an optional dialog, and shadowing lines come verbatim from the lesson examples, including their lesson meaning when the private book page is unavailable.
+
+The responsive browser fixture covers desktop, iPad portrait, iPad landscape, and iPhone 390px layouts. It intercepts `/api` with deterministic local data, so the reference images can be regenerated without backend or AI calls:
+
+```sh
+npm run typecheck
+npm test
+npm run build
+npm run test:e2e -- e2e/ebook-redesign.spec.ts
+```
+
+The full frontend validation command is `npm run validate`. The deterministic local screenshots are [desktop](docs/screenshots/ebook-desktop-local.png) and [iPhone 390](docs/screenshots/ebook-phone-local.png); the fixture and screenshot steps live in [e2e/ebook-redesign.spec.ts](e2e/ebook-redesign.spec.ts).

@@ -24,6 +24,7 @@ import type { SessionData, User, Feedback, Attempt, Turn } from "@/lib/types";
 import { VoiceRecorder } from "@/features/audio/recorder";
 import { LiveVoice } from "@/features/audio/live";
 import ListeningPractice from "./ListeningPractice";
+import EbookShadowingPractice from "./EbookShadowingPractice";
 import { Mascot, Loading, ErrorMessage, VoiceButton } from "./ui";
 export default function Practice({
   id,
@@ -294,6 +295,10 @@ export default function Practice({
         <ErrorMessage message={error} />
       </>
     );
+  const sessionState = data.session.state as typeof data.session.state & Record<string, unknown>;
+  if ((data.session.mode as string) === "shadowing" || sessionState.ebook_activity === "shadowing" || (sessionState.ebook_skill as string) === "shadowing") {
+    return <EbookShadowingPractice id={id} user={user} data={data} reload={load} onBack={onBack} />;
+  }
   if (data.session.mode === "listening") return <ListeningPractice id={id} user={user} data={data} reload={load} onBack={onBack} />;
   const { session: s, lesson: l, attempts } = data;
   const last = attempts.at(-1);
