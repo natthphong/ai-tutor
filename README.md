@@ -118,3 +118,8 @@ npm run test:e2e -- e2e/ebook-redesign.spec.ts
 ```
 
 The full frontend validation command is `npm run validate`. The deterministic local screenshots are [desktop](docs/screenshots/ebook-desktop-local.png) and [iPhone 390](docs/screenshots/ebook-phone-local.png); the fixture and screenshot steps live in [e2e/ebook-redesign.spec.ts](e2e/ebook-redesign.spec.ts).
+
+Production QA on 27 September 2026 passed against `x-toko-release: cd0f03119217` with backend release `20260927-ebook`. At 1265px the lesson column measured 610px and the Explain, Practice, and Next actions stayed on one row; the mobile capture also passed the overflow and overlap checks.
+
+![Production desktop 1265px](docs/screenshots/ebook-production-desktop-1265-final-20260927.png)
+![Production mobile 390×844](docs/screenshots/ebook-production-mobile-390x844-final-20260927.png)
