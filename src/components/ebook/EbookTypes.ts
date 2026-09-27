@@ -123,6 +123,24 @@ export type QuizMark = {
   answer: string;
 };
 
+const GUIDED_COURSE_VERSION = "2026-09-20.v1";
+
+export function isGuidedCourseId(id: string): boolean {
+  return /^ebook-\d{3}$/.test(id);
+}
+
+/**
+ * Stable ebook-### IDs are the public identity of the bundled guided course.
+ * Keep this catalog-level check separate from pack shape: a response can lose
+ * convenience fields during a deploy, but it must never fall back to the
+ * private PDF worksheet when the guided catalog is selected.
+ */
+export function isGuidedCatalog(catalog: EbookCatalog): boolean {
+  return catalog.version === GUIDED_COURSE_VERSION || (
+    catalog.units.length > 0 && catalog.units.every((unit) => isGuidedCourseId(unit.id))
+  );
+}
+
 const STEP_FALLBACKS = [
   { id: "understand", title: "Understand" },
   { id: "examples", title: "Examples" },

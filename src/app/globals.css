@@ -3630,3 +3630,35 @@ audio {
   .ebook-lesson-column{padding-bottom:24px}
   .ebook-speak-handoff{margin-bottom:20px}
 }
+
+/* Vocabulary coach controls stay actionable on the lesson sidebar. */
+.ebook-word-actions .voice-control{display:flex;align-items:flex-end;max-width:92px}
+.ebook-word-actions .voice-control .text-button{min-height:36px;padding:6px 4px;white-space:nowrap;font-size:10px}
+
+/* Give the guided lesson room to teach at laptop and tablet widths. The
+   full three-column canvas only returns when the viewport can support it. */
+@media (min-width:1200px) and (max-width:1450px){
+  .ebook-course-layout{grid-template-columns:minmax(0,1fr) minmax(260px,300px);gap:16px}
+  .ebook-unit-nav{grid-column:1/-1;position:static;max-height:none;padding:14px 16px;display:grid;grid-template-columns:auto minmax(190px,240px) minmax(270px,1fr);align-items:center;gap:10px 12px}
+  .ebook-unit-nav-title{grid-column:1}
+  .ebook-search{grid-column:2;margin:0}
+  .ebook-filter-grid{grid-column:3;grid-template-columns:repeat(4,minmax(0,1fr))}
+  .ebook-filter-headings{display:none}
+  .ebook-units{grid-column:1/-1;display:flex;gap:8px;overflow-x:auto;margin-top:0;padding-bottom:2px}
+  .ebook-unit{min-width:210px;max-width:280px;flex:1}
+  .ebook-lesson-column{grid-column:1;grid-row:2}
+  .ebook-coach-column{grid-column:2;grid-row:2;position:static;max-height:none}
+}
+@media (min-width:901px) and (max-width:1199px){
+  .ebook-course-layout{grid-template-columns:minmax(0,1fr);gap:15px}
+  .ebook-unit-nav{position:static;max-height:230px;display:grid;grid-template-columns:auto minmax(190px,240px) minmax(270px,1fr);align-items:center;gap:10px 12px}
+  .ebook-unit-nav-title{grid-column:1}
+  .ebook-search{grid-column:2;margin:0}
+  .ebook-filter-grid{grid-column:3;grid-template-columns:repeat(4,minmax(0,1fr))}
+  .ebook-filter-headings{display:none}
+  .ebook-units{grid-column:1/-1;display:flex;gap:8px;overflow-x:auto;margin-top:0;padding-bottom:2px}
+  .ebook-unit{min-width:210px;max-width:280px;flex:1}
+  .ebook-lesson-column{order:1}
+  .ebook-coach-column{order:2;position:static;max-height:none;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-items:start}
+  .ebook-shadow-source,.ebook-phrases-card{grid-column:span 2}
+}

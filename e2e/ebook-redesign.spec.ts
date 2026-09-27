@@ -111,8 +111,50 @@ async function installEbookApi(page: Page, options: { failFirstCheck?: boolean }
   return { progressByUnit, savedVocabulary, checkRequestIds };
 }
 
+async function installStableCourseApi(page: Page) {
+  const stableUnit = unit("ebook-001", 1, "Present continuous");
+  const stableProgress: Record<string, unknown> = {
+    learning_state: "learning",
+    current_step: 1,
+    percent: 20,
+  };
+  await page.route("**/api/**", async route => {
+    const url = new URL(route.request().url());
+    const path = url.pathname.replace(/^\/api/, "");
+    const method = route.request().method();
+    if (path === "/auth/me") return route.fulfill({ json: user });
+    if (path === "/progress") return route.fulfill({ json: { streak: 0, attempts: 0, speaking_minutes: 0, daily: [] } });
+    if (path === "/ebook") {
+      return route.fulfill({ json: {
+        title: "Learn Ebook · Practical English Grammar",
+        version: "2026-09-20.v1",
+        page_count: 0,
+        units: [stableUnit],
+        progress: { "ebook-001": stableProgress },
+        cursor: { unit_id: "ebook-001" },
+      } });
+    }
+    if (path === "/ebook/units/ebook-001" && method === "GET") {
+      // Deliberately omit is_redesigned: the stable catalog identity is the
+      // source of truth when a backend response is missing that convenience flag.
+      return route.fulfill({ json: {
+        unit: stableUnit,
+        version: "2026-09-20.v1",
+        status: "ready",
+        pack: { ...pack, concept_steps: undefined, shadowing_sentences: undefined, original_book: undefined },
+        progress: stableProgress,
+      } });
+    }
+    if (path === "/ebook/units/ebook-001/progress" && method === "PATCH") {
+      return route.fulfill({ json: { saved: true, progress: stableProgress } });
+    }
+    return route.fulfill({ json: {} });
+  });
+}
+
 for (const device of [
   { name: "desktop 1440", viewport: { width: 1440, height: 1000 } },
+  { name: "desktop 1265", viewport: { width: 1265, height: 1000 } },
   { name: "iPad portrait", viewport: { width: 820, height: 1180 } },
   { name: "iPad landscape", viewport: { width: 1180, height: 820 } },
   { name: "iPhone 390", viewport: { width: 390, height: 844 } },
@@ -148,7 +190,17 @@ for (const device of [
         expect(overlapWidth * overlapHeight).toBe(0);
       }
       if (device.name === "desktop 1440") await page.screenshot({ path: "docs/screenshots/ebook-desktop-local.png", fullPage: true });
+      if (device.name === "desktop 1265") await page.screenshot({ path: "docs/screenshots/ebook-desktop-1265-local.png", fullPage: true });
       if (device.name === "iPhone 390") await page.screenshot({ path: "docs/screenshots/ebook-phone-local.png", fullPage: true });
+      if (device.name === "desktop 1265") {
+        const lesson = await page.locator("main.ebook-lesson-column").boundingBox();
+        expect(lesson?.width || 0).toBeGreaterThanOrEqual(560);
+        const actionButtons = page.getByLabel("Lesson actions").getByRole("button");
+        expect(await actionButtons.count()).toBe(3);
+        const boxes = await Promise.all([0, 1, 2].map((index) => actionButtons.nth(index).boundingBox()));
+        const yValues = boxes.map((box) => box?.y || 0);
+        expect(Math.max(...yValues) - Math.min(...yValues)).toBeLessThanOrEqual(2);
+      }
     });
 
     test("limits vocabulary, gives submitted question feedback, and keeps source text verbatim", async ({ page }) => {
@@ -208,6 +260,17 @@ test("shows the goal, pattern, and real examples on the first lesson step", asyn
   await expect(page.getByText("present_tenses", { exact: true })).toHaveCount(0);
   await expect(page.getByText("a-client-handoff", { exact: true })).toHaveCount(0);
   await expect(page.getByText("Could you share the deadline?", { exact: true })).toBeVisible();
+});
+
+test("keeps stable guided-course lessons out of the legacy PDF fallback", async ({ page }) => {
+  await installStableCourseApi(page);
+  await page.goto("/?view=ebook");
+  await expect(page.getByRole("heading", { name: "Unit lesson title" })).toContainText("Present continuous");
+  await expect(page.locator(".ebook-legacy-card")).toHaveCount(0);
+  await expect(page.locator(".ebook-legacy-book")).toHaveCount(0);
+  await expect(page.getByAltText(/หนังสือต้นฉบับ/)).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "Vocabulary" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Listen", exact: true }).first()).toBeVisible();
 });
 
 test("routes ebook shadowing sessions to the exact lesson line practice", async ({ page }) => {

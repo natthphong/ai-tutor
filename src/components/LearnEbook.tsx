@@ -18,6 +18,7 @@ import {
   deriveLearningState,
   getActiveStepIndex,
   isLegacyPack,
+  isGuidedCatalog,
   mergeDetailProgress,
   normalizeCatalog,
   normalizeDetail,
@@ -312,7 +313,7 @@ export default function LearnEbook({
 
   const pack = detail?.pack;
   const currentStep = pack?.concept_steps[activeStep] || pack?.concept_steps[0];
-  const legacy = Boolean(pack && isLegacyPack(pack));
+  const legacy = Boolean(pack && !isGuidedCatalog(book) && isLegacyPack(pack));
   const progressState = detail ? deriveLearningState(detail.progress) : "unlearned";
   return (
     <>
