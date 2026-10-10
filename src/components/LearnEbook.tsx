@@ -113,6 +113,15 @@ export default function LearnEbook({
     await task;
   }
 
+  // Progress writes run one after another. A draft save that is still in
+  // flight when a check finishes would otherwise answer later with the state
+  // from before the check and put the old percent back on screen.
+  function inOrder<T>(task: () => Promise<T>): Promise<T> {
+    const run = saveChain.current.catch(() => undefined).then(task);
+    saveChain.current = run.then(() => undefined, () => undefined);
+    return run;
+  }
+
   async function openUnit(id: string, initialPage?: number, catalogSnapshot: EbookCatalog | null = book) {
     if (!catalogSnapshot) return;
     setBusy(true);
@@ -255,7 +264,7 @@ export default function LearnEbook({
         ? quizRequest.current.requestId
         : typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${selected}`;
       quizRequest.current = { fingerprint, requestId };
-      const result = await post<{ marks?: QuizMark[]; progress?: EbookProgress }>(`/ebook/units/${selected}/check`, { request_id: requestId, answers: payload });
+      const result = await inOrder(() => post<{ marks?: QuizMark[]; progress?: EbookProgress }>(`/ebook/units/${selected}/check`, { request_id: requestId, answers: payload }));
       if (result.marks) {
         const marks = result.marks;
         setMarks((current) => ({ ...current, ...Object.fromEntries(marks.map((mark) => [mark.id, mark])) }));

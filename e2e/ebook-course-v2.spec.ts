@@ -322,6 +322,40 @@ test("a finished unit shows 100% as soon as the server reports the last step", a
   await expect(page.getByRole("progressbar", { name: "Unit progress" })).toHaveAttribute("aria-valuenow", "100");
 });
 
+test("a draft save that overlaps a check never shows the progress from before the check", async ({ page }) => {
+  await installCourse(page);
+  // The server's view of the unit. A save answers with the state it saw when
+  // the request arrived, a little later, like a real round trip.
+  const server = { current_step: 3, completed_steps: { understand: true, examples: true } as Record<string, boolean> };
+  const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+  await page.route("**/api/ebook/units/*/progress", async (route) => {
+    const seen = JSON.parse(JSON.stringify(server));
+    await wait(800);
+    return route.fulfill({ json: { saved: true, progress: seen } });
+  });
+  await page.route("**/api/ebook/units/*/check", async (route) => {
+    const body = route.request().postDataJSON() as { answers: Record<string, string> };
+    const id = Object.keys(body.answers)[0];
+    await wait(600);
+    server.completed_steps.quiz = true;
+    return route.fulfill({ json: { marks: [{ id, correct: true, reason_th: "ถูกต้อง", answer: "" }], correct: 8, total: 8, listening_done: false, progress: JSON.parse(JSON.stringify(server)) } });
+  });
+  await page.goto("/?view=ebook");
+  const row = page.locator(".ebook-unit").first();
+  await page.getByRole("listitem", { name: "Quick practice" }).getByRole("button").click();
+  await expect(page.getByRole("listitem", { name: "Quick practice" })).toHaveAttribute("aria-current", "step");
+  // Let the saves from opening the unit and changing step finish first.
+  await page.waitForTimeout(2600);
+  // Answer and check at once: the debounced draft save fires while the check is in flight.
+  await page.getByRole("radio", { name: "gets", exact: true }).check();
+  await page.getByRole("button", { name: "ตรวจคำตอบ", exact: true }).click();
+  await expect(row).toContainText("Learning · 60%", { timeout: 10000 });
+  // Every overlapping save has answered by now; the percent must not fall back.
+  await page.waitForTimeout(3000);
+  await expect(row).toContainText("Learning · 60%");
+  await expect(page.getByRole("progressbar", { name: "Unit progress" })).toHaveAttribute("aria-valuenow", "60");
+});
+
 test("a slow save of an earlier step never moves the learner back", async ({ page }) => {
   const saved: number[] = [];
   let firstSeen: () => void = () => {};
