@@ -654,6 +654,20 @@ export function getProgressPercent(progress: EbookProgress): number {
   return progress.page || progress.answers ? 20 : 0;
 }
 
+/**
+ * Recomputes percent and state after the server returns new completed steps.
+ * The catalog summary is only read when a unit is opened, so without this the
+ * unit list and the coach keep showing the percent from before the last check.
+ */
+export function withDerivedStatus(progress: EbookProgress): EbookProgress {
+  if (!progress.completed_steps || typeof progress.completed_steps !== "object") return progress;
+  const completed = asRecord(progress.completed_steps);
+  const count = STEP_FALLBACKS.filter((step) => completed[step.id] === true).length;
+  const review = bool(progress.review_requested) || bool(progress.review_due);
+  const learning_state: LearningState = review ? "review" : count === STEP_FALLBACKS.length ? "learned" : "learning";
+  return { ...progress, percent: count * 20, learning_state };
+}
+
 export function isLegacyPack(pack: EbookPack): boolean {
   return !pack.is_redesigned && pack.questions.length > 0;
 }

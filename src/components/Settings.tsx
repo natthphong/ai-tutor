@@ -14,6 +14,7 @@ import {
 import { api, post } from "@/lib/api";
 import type { User, Usage } from "@/lib/types";
 import { ErrorMessage, SectionTitle } from "./ui";
+import ResetLearning from "./ResetLearning";
 export default function SettingsPage({
   user,
   onUpdate,
@@ -330,6 +331,7 @@ export default function SettingsPage({
           {passwordChanged && <p className="success">เปลี่ยนรหัสผ่านแล้ว อุปกรณ์อื่นต้องเข้าสู่ระบบใหม่</p>}
         </form>
       </section>
+      <ResetLearning user={user} onDone={onUpdate} />
     </>
   );
 }

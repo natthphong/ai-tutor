@@ -24,6 +24,7 @@ import {
   mergeDetailProgress,
   normalizeCatalog,
   normalizeDetail,
+  withDerivedStatus,
   type EbookCatalog,
   type EbookDetail,
   type EbookListeningItem,
@@ -87,8 +88,8 @@ export default function LearnEbook({
           body: JSON.stringify({ page: snapshot.page, answers: snapshot.answers, current_step: snapshot.currentStep, completed_steps: snapshot.completedSteps, quiz_answers: snapshot.answers }),
         });
         if (result.progress) {
-          setDetail((current) => current && current.unit.id === snapshot.id ? { ...current, progress: { ...current.progress, ...result.progress } } : current);
-          setBook((current) => current ? { ...current, progress: { ...current.progress, [snapshot.id]: { ...(current.progress[snapshot.id] || {}), ...result.progress } } } : current);
+          setDetail((current) => current && current.unit.id === snapshot.id ? { ...current, progress: withDerivedStatus({ ...current.progress, ...result.progress }) } : current);
+          setBook((current) => current ? { ...current, progress: { ...current.progress, [snapshot.id]: withDerivedStatus({ ...(current.progress[snapshot.id] || {}), ...result.progress }) } } : current);
           if (draft.current.id === snapshot.id) {
             // A slow response to an earlier save must not move the learner
             // back: adopt the saved step only if they have not moved since.
@@ -190,8 +191,8 @@ export default function LearnEbook({
   }, [answers, activeStep, page, selected]);
 
   function updateProgress(next: EbookProgress) {
-    setDetail((current) => current ? { ...current, progress: { ...current.progress, ...next } } : current);
-    setBook((current) => current ? { ...current, progress: { ...current.progress, [selected]: { ...(current.progress[selected] || {}), ...next } } } : current);
+    setDetail((current) => current ? { ...current, progress: withDerivedStatus({ ...current.progress, ...next }) } : current);
+    setBook((current) => current ? { ...current, progress: { ...current.progress, [selected]: withDerivedStatus({ ...(current.progress[selected] || {}), ...next }) } } : current);
     if (next.current_step !== undefined) draft.current.currentStep = next.current_step;
     if (next.completed_steps) draft.current.completedSteps = { ...draft.current.completedSteps, ...next.completed_steps };
   }
@@ -202,6 +203,11 @@ export default function LearnEbook({
     const completed = { ...(detail.progress.completed_steps || {}) };
     const previousStep = PROGRESS_STEP_IDS[bounded - 1];
     if (completePrevious && (previousStep === "understand" || previousStep === "examples")) completed[previousStep] = true;
+    // Moving past a reading step by any route (step bar, Practice) leaves it
+    // behind, the same as pressing Next on it.
+    if (bounded > activeStep) {
+      for (const step of PROGRESS_STEP_IDS.slice(activeStep, bounded)) if (step === "understand" || step === "examples") completed[step] = true;
+    }
     const currentStep = bounded + 1;
     draft.current.currentStep = currentStep;
     draft.current.completedSteps = completed;

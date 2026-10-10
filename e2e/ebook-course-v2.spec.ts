@@ -279,6 +279,49 @@ for (const device of [
   });
 }
 
+test("reading steps count as done however the learner moves on, and the percent follows each check", async ({ page }) => {
+  const saves: Record<string, unknown>[] = [];
+  await installCourse(page);
+  page.on("request", (request) => {
+    if (request.method() === "PATCH" && request.url().includes("/progress")) saves.push(request.postDataJSON() as Record<string, unknown>);
+  });
+  await page.goto("/?view=ebook");
+  await expect(page.getByRole("heading", { name: "Unit lesson title" })).toHaveText("Present simple");
+  // Jump from Understand straight to the quiz with the step bar, never pressing Next.
+  await page.getByRole("listitem", { name: "Quick practice" }).getByRole("button").click();
+  await expect.poll(() => (saves.at(-1)?.completed_steps as Record<string, boolean> | undefined)?.examples, { timeout: 8000 }).toBe(true);
+  expect(saves.at(-1)?.completed_steps).toMatchObject({ understand: true, examples: true });
+  expect(saves.at(-1)?.current_step).toBe(3);
+  // Going back to an earlier step never un-completes anything.
+  await page.getByRole("listitem", { name: "Understand" }).getByRole("button").click();
+  await page.getByRole("listitem", { name: "Quick practice" }).getByRole("button").click();
+  await expect.poll(() => saves.at(-1)?.current_step, { timeout: 8000 }).toBe(3);
+  expect(saves.at(-1)?.completed_steps).toMatchObject({ understand: true, examples: true });
+});
+
+test("a finished unit shows 100% as soon as the server reports the last step", async ({ page }) => {
+  await installCourse(page);
+  // The server settles the reading steps when the quiz is passed and returns
+  // every completed step with the check result.
+  await page.route("**/api/ebook/units/*/check", async (route) => {
+    const body = route.request().postDataJSON() as { answers: Record<string, string> };
+    const id = Object.keys(body.answers)[0];
+    return route.fulfill({ json: {
+      marks: [{ id, correct: true, reason_th: "ถูกต้อง", answer: "" }], correct: 8, total: 8, listening_done: true,
+      progress: { current_step: 3, quiz_scores: { [id]: true }, completed_steps: { understand: true, examples: true, quiz: true, shadowing: true, speaking: true }, learned: true },
+    } });
+  });
+  await page.goto("/?view=ebook");
+  const row = page.locator(".ebook-unit").first();
+  await expect(row).toContainText("Unlearned · 0%");
+  await page.getByRole("listitem", { name: "Quick practice" }).getByRole("button").click();
+  await page.getByRole("radio", { name: "gets", exact: true }).check();
+  await page.getByRole("button", { name: "ตรวจคำตอบ", exact: true }).click();
+  await expect(row).toContainText("Learned · 100%");
+  await expect(page.locator(".ebook-state-badge")).toHaveText("learned");
+  await expect(page.getByRole("progressbar", { name: "Unit progress" })).toHaveAttribute("aria-valuenow", "100");
+});
+
 test("a slow save of an earlier step never moves the learner back", async ({ page }) => {
   const saved: number[] = [];
   let firstSeen: () => void = () => {};

@@ -773,6 +773,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/account/reset": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Clear the signed-in learner's own learning data so they can start over.
+         * @description scope=library clears My collection and the review queue (saved vocabulary, mistakes, every scheduled review); lesson progress stays and finished units are not scheduled again. scope=all also clears lesson progress and practice history. The account, settings, Daily Meet entries, custom scenarios and the AI usage ledger are always kept. This cannot be undone.
+         */
+        post: operations["reset_learning_data"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1470,6 +1490,21 @@ export interface components {
             wrong: string;
             right: string;
             why_th: string;
+        };
+        AccountResetRequest: {
+            /** @description The learner must type the word delete (case-insensitive). */
+            confirm: string;
+            /** @enum {string} */
+            scope: "library" | "all";
+        };
+        AccountResetResult: {
+            reset: boolean;
+            /** @enum {string} */
+            scope: "library" | "all";
+            /** @description Rows removed per table. */
+            deleted: {
+                [key: string]: number;
+            };
         };
     };
     responses: never;
@@ -6116,6 +6151,66 @@ export interface operations {
             };
             /** @description Unit not prepared */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    reset_learning_data: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AccountResetRequest"];
+            };
+        };
+        responses: {
+            /** @description Data cleared */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccountResetResult"];
+                };
+            };
+            /** @description Missing scope or the confirmation word was not typed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Login required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description A Live session is still active */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Too many attempts */
+            429: {
                 headers: {
                     [name: string]: unknown;
                 };
