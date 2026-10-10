@@ -1,9 +1,15 @@
 export type LearningState = "unlearned" | "learning" | "learned" | "review";
 
+export type EbookLevel = "A1" | "A2" | "B1" | "B2";
+
 export type EbookUnit = {
   id: string;
   number: number;
   title: string;
+  title_th?: string;
+  level?: EbookLevel;
+  path_order?: number;
+  theme_th?: string;
   lesson_page: number;
   exercise_page: number;
   answer_pages?: number[];
@@ -22,6 +28,7 @@ export type EbookProgress = {
   completed_steps?: Record<string, boolean>;
   quiz_answers?: Record<string, string>;
   quiz_scores?: Record<string, number | boolean>;
+  listening_scores?: Record<string, boolean>;
   vocabulary_saved?: Record<string, boolean>;
   learned?: boolean;
   completed_at?: string;
@@ -40,12 +47,22 @@ export type EbookCatalog = {
   units: EbookUnit[];
   progress: Record<string, EbookProgress>;
   cursor?: { unit_id?: string; page?: number };
+  recommended_unit_id?: string;
+  path?: EbookPath;
+};
+
+export type EbookPath = {
+  total: number;
+  learned: number;
+  review?: number;
+  levels: { level: EbookLevel; total: number; learned: number }[];
 };
 
 export type EbookWord = {
   term: string;
   meaning: string;
   example: string;
+  example_th?: string;
   part_of_speech?: string;
 };
 
@@ -60,10 +77,12 @@ export type EbookOption = { id: string; text: string };
 
 export type EbookQuestion = {
   id: string;
-  kind: "write" | "match" | "choice";
+  kind: "write" | "match" | "choice" | "fill" | "reorder" | "fix" | "translate";
   prompt: string;
   instruction_th: string;
   options: EbookOption[];
+  /** Shuffled words of a reorder item; empty for every other kind. */
+  tokens?: string[];
   answers?: string[];
   example?: boolean;
 };
@@ -83,6 +102,18 @@ export type EbookShadowLine = {
   audio_id?: string;
 };
 
+/** A line the learner hears before reading it. */
+export type EbookListeningItem = {
+  id: string;
+  sentence: string;
+  question_th: string;
+  options: EbookOption[];
+};
+
+export type EbookForm = { label: string; pattern: string; sentence: string; meaning: string };
+
+export type EbookMistake = { wrong: string; right: string; why_th: string };
+
 export type EbookOriginalBook = {
   available?: boolean;
   page: number;
@@ -95,6 +126,15 @@ export type EbookPack = {
   goal: string;
   pattern: string;
   notes: string[];
+  title_th?: string;
+  level?: EbookLevel;
+  theme_th?: string;
+  forms: EbookForm[];
+  signal_words: string[];
+  common_mistakes: EbookMistake[];
+  compare_th: string;
+  listening_items: EbookListeningItem[];
+  speaking_criteria: string[];
   examples: EbookExample[];
   vocabulary: EbookWord[];
   questions: EbookQuestion[];
@@ -123,7 +163,7 @@ export type QuizMark = {
   answer: string;
 };
 
-const GUIDED_COURSE_VERSION = "2026-09-20.v1";
+const GUIDED_COURSE_VERSIONS = ["2026-10-10.v2", "2026-09-20.v1"];
 
 export function isGuidedCourseId(id: string): boolean {
   return /^ebook-\d{3}$/.test(id);
@@ -136,7 +176,7 @@ export function isGuidedCourseId(id: string): boolean {
  * private PDF worksheet when the guided catalog is selected.
  */
 export function isGuidedCatalog(catalog: EbookCatalog): boolean {
-  return catalog.version === GUIDED_COURSE_VERSION || (
+  return GUIDED_COURSE_VERSIONS.includes(catalog.version) || (
     catalog.units.length > 0 && catalog.units.every((unit) => isGuidedCourseId(unit.id))
   );
 }
@@ -208,6 +248,12 @@ function firstUnknown(source: Record<string, unknown>, keys: string[]): unknown 
   return undefined;
 }
 
+const LEVELS: EbookLevel[] = ["A1", "A2", "B1", "B2"];
+
+function normalizeLevel(value: unknown): EbookLevel | undefined {
+  return LEVELS.includes(value as EbookLevel) ? (value as EbookLevel) : undefined;
+}
+
 function normalizeUnit(raw: unknown, index: number): EbookUnit {
   const source = asRecord(raw);
   const sections = asArray(source.sections).map((section, sectionIndex) => {
@@ -221,6 +267,10 @@ function normalizeUnit(raw: unknown, index: number): EbookUnit {
     id: firstText(source, ["id", "unit_id"], `unit-${String(index + 1).padStart(3, "0")}`),
     number: number(source.number ?? source.ordinal, index + 1),
     title: firstText(source, ["title", "name"], `Unit ${index + 1}`),
+    title_th: firstText(source, ["title_th"]) || undefined,
+    level: normalizeLevel(source.level),
+    path_order: number(source.path_order, 0) || undefined,
+    theme_th: firstText(source, ["theme_th"]) || undefined,
     lesson_page: number(source.lesson_page ?? source.page, 1),
     exercise_page: number(source.exercise_page, number(source.lesson_page ?? source.page, 1)),
     answer_pages: asArray(source.answer_pages)
@@ -289,6 +339,7 @@ function normalizeQuestion(raw: unknown, index: number, prefix = "quiz"): EbookQ
     prompt,
     instruction_th: firstText(source, ["instruction_th", "prompt_th", "instructionThai", "hint_th"], "ลองตอบตามความหมาย"),
     options,
+    tokens: asArray(source.tokens).map((token) => exactText(token)).filter(Boolean),
     answers: answers.length ? answers : undefined,
     example: bool(source.example),
   };
@@ -337,6 +388,7 @@ function normalizeVocabulary(source: Record<string, unknown>): EbookWord[] {
         term: firstText(value, ["term", "word", "phrase"]),
         meaning: firstText(value, ["meaning_th", "meaning", "thai", "th"]),
         example: firstText(value, ["example", "example_sentence", "example_en", "sentence"]),
+        example_th: firstText(value, ["example_th"]) || undefined,
         part_of_speech: firstText(value, ["part_of_speech", "pos"]) || undefined,
       };
     })
@@ -384,7 +436,10 @@ function normalizeShadowing(source: Record<string, unknown>, examples: EbookExam
       };
     })
     .filter((line) => Boolean(line.sentence));
-  if (!examples.length) return lines.slice(0, 3);
+  // Course v2 shadows the lines the learner just heard, which are not lesson
+  // examples. Older packs list example sentences without their meaning.
+  const exampleSentences = new Set(examples.map((example) => example.sentence));
+  if (!examples.length || (lines.length > 0 && lines.some((line) => !exampleSentences.has(line.sentence)))) return lines.slice(0, 3);
   const sourceBySentence = new Map(lines.map((line) => [line.sentence, line]));
   return examples.slice(0, 3).map((example) => {
     const source = sourceBySentence.get(example.sentence);
@@ -395,6 +450,43 @@ function normalizeShadowing(source: Record<string, unknown>, examples: EbookExam
       audio_id: source?.audio_id || example.audio_id,
     };
   });
+}
+
+function normalizeListening(source: Record<string, unknown>): EbookListeningItem[] {
+  return asArray(source.listening_items)
+    .map((item, index) => {
+      const value = asRecord(item);
+      return {
+        id: firstText(value, ["id"], `listen-${String(index + 1).padStart(2, "0")}`),
+        sentence: exactText(firstUnknown(value, ["sentence", "audio_en"])),
+        question_th: firstText(value, ["question_th"]),
+        options: asArray(firstUnknown(value, ["options", "options_th"])).map(normalizeOption),
+      };
+    })
+    .filter((item) => Boolean(item.sentence) && item.options.length > 0);
+}
+
+function normalizeForms(source: Record<string, unknown>): EbookForm[] {
+  return asArray(source.forms)
+    .map((form) => {
+      const value = asRecord(form);
+      return {
+        label: firstText(value, ["label", "label_th"]),
+        pattern: firstText(value, ["pattern"]),
+        sentence: exactText(firstUnknown(value, ["sentence", "example_en"])),
+        meaning: firstText(value, ["meaning", "example_th"]),
+      };
+    })
+    .filter((form) => Boolean(form.pattern || form.sentence));
+}
+
+function normalizeMistakes(source: Record<string, unknown>): EbookMistake[] {
+  return asArray(source.common_mistakes)
+    .map((mistake) => {
+      const value = asRecord(mistake);
+      return { wrong: exactText(value.wrong), right: exactText(value.right), why_th: firstText(value, ["why_th", "why"]) };
+    })
+    .filter((mistake) => Boolean(mistake.wrong && mistake.right));
 }
 
 function normalizeBook(source: Record<string, unknown>, unit: EbookUnit): EbookOriginalBook {
@@ -440,6 +532,15 @@ export function normalizePack(raw: unknown, unit: EbookUnit): EbookPack {
     notes: asArray(firstUnknown(source, ["notes", "supporting_notes", "pattern_notes"]))
       .map((note) => text(note))
       .filter(Boolean),
+    title_th: firstText(source, ["title_th"]) || undefined,
+    level: normalizeLevel(source.level),
+    theme_th: firstText(source, ["theme_th"]) || undefined,
+    forms: normalizeForms(source),
+    signal_words: asArray(source.signal_words).map((word) => text(word)).filter(Boolean),
+    common_mistakes: normalizeMistakes(source),
+    compare_th: firstText(source, ["compare_th"]),
+    listening_items: normalizeListening(source),
+    speaking_criteria: asArray(firstUnknown(source, ["speaking_criteria"])).map((item) => text(item)).filter(Boolean),
     examples,
     vocabulary: normalizeVocabulary(source),
     questions,
@@ -482,7 +583,34 @@ export function normalizeCatalog(raw: unknown): EbookCatalog {
       unit_id: firstText(cursor, ["unit_id", "unitId"]) || undefined,
       page: number(cursor.page, 0) || undefined,
     },
+    recommended_unit_id: firstText(source, ["recommended_unit_id"]) || undefined,
+    path: normalizePath(source.path),
   };
+}
+
+function normalizePath(raw: unknown): EbookPath | undefined {
+  const source = asRecord(raw);
+  const levels = asArray(source.levels)
+    .map((item) => {
+      const value = asRecord(item);
+      const level = normalizeLevel(value.level);
+      return level ? { level, total: number(value.total, 0), learned: number(value.learned, 0) } : null;
+    })
+    .filter((item): item is { level: EbookLevel; total: number; learned: number } => Boolean(item));
+  if (!levels.length) return undefined;
+  return { total: number(source.total, 0), learned: number(source.learned, 0), review: number(source.review, 0), levels };
+}
+
+/** Units in the recommended learning order (A1 first) when the course provides one. */
+export function inPathOrder(units: EbookUnit[]): EbookUnit[] {
+  if (!units.every((unit) => unit.path_order)) return units;
+  return [...units].sort((a, b) => (a.path_order || 0) - (b.path_order || 0));
+}
+
+/** True when every listen-first item of the unit has been answered correctly. */
+export function isListeningDone(pack: EbookPack, progress: EbookProgress): boolean {
+  const scores = progress.listening_scores || {};
+  return pack.listening_items.every((item) => scores[item.id] === true);
 }
 
 export function normalizeDetail(raw: unknown, fallbackUnit?: EbookUnit): EbookDetail | null {

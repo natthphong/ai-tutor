@@ -973,6 +973,31 @@ export interface components {
                 kind: string;
                 minutes: number;
             }[];
+            /** @description Learn Ebook part of today's plan: capped review first, then the next unit on the learning path. */
+            ebook?: {
+                total: number;
+                learned: number;
+                review_limit: number;
+                review_today: number;
+                levels: {
+                    /** @enum {string} */
+                    level: "A1" | "A2" | "B1" | "B2";
+                    total: number;
+                    learned: number;
+                }[];
+                next_unit?: {
+                    id: string;
+                    number: number;
+                    title: string;
+                    title_th?: string;
+                    /** @enum {string} */
+                    level: "A1" | "A2" | "B1" | "B2";
+                    path_order?: number;
+                    theme_th?: string;
+                    status: components["schemas"]["EbookStatus"];
+                    percent: number;
+                };
+            };
         };
         Error: {
             error: string;
@@ -1120,6 +1145,11 @@ export interface components {
             current_step: number;
             review_due: boolean;
             original_book: components["schemas"]["EbookOriginalBook"];
+            title_th?: string;
+            /** @enum {string} */
+            level?: "A1" | "A2" | "B1" | "B2";
+            path_order?: number;
+            theme_th?: string;
         };
         EbookExample: {
             en: string;
@@ -1135,17 +1165,18 @@ export interface components {
         EbookQuizItem: {
             id: string;
             /** @enum {string} */
-            kind: "choice" | "write";
+            kind: "choice" | "fill" | "reorder" | "fix" | "translate" | "write";
             prompt_en: string;
             prompt_th: string;
+            /** @description Fillers for a choice item, or the shuffled words of a reorder item. */
             options?: string[];
         };
-        /** @description A verbatim English sentence from the lesson examples, selected for audio shadowing. */
+        /** @description The English sentence of one listening item, repeated aloud after the learner has answered it by ear. */
         EbookShadowLine: string;
         EbookPracticeTask: {
             prompt_en: string;
             prompt_th: string;
-            target_vocabulary: string[];
+            target_vocabulary?: string[];
             success_criteria_th: string[];
         };
         EbookLesson: {
@@ -1161,8 +1192,21 @@ export interface components {
             quiz: components["schemas"]["EbookQuizItem"][];
             shadowing: components["schemas"]["EbookShadowLine"][];
             speaking: components["schemas"]["EbookPracticeTask"];
-            listening: components["schemas"]["EbookPracticeTask"];
             concept_tags?: string[];
+            path_order: number;
+            /** @enum {string} */
+            level: "A1" | "A2" | "B1" | "B2";
+            title_th: string;
+            theme_en?: string;
+            theme_th?: string;
+            /** @enum {string} */
+            domain?: "everyday" | "work";
+            usage_th: string[];
+            forms: components["schemas"]["EbookForm"][];
+            signal_words?: string[];
+            common_mistakes: components["schemas"]["EbookMistake"][];
+            compare_th?: string;
+            listening_items: components["schemas"]["EbookListeningItem"][];
         };
         EbookOption: {
             id: string;
@@ -1171,13 +1215,15 @@ export interface components {
         EbookQuestion: {
             id: string;
             /** @enum {string} */
-            kind: "write" | "match" | "choice";
+            kind: "write" | "match" | "choice" | "fill" | "reorder" | "fix" | "translate";
             prompt: string;
             instruction_th: string;
             options: components["schemas"]["EbookOption"][];
             answers?: string[];
             open?: boolean;
             example?: boolean;
+            /** @description Shuffled words of a reorder item. Empty for every other kind. */
+            tokens?: string[];
         };
         EbookPack: {
             explanation_th: string;
@@ -1211,6 +1257,33 @@ export interface components {
                 sentence: string;
                 meaning: string;
             }[];
+            title?: string;
+            title_th?: string;
+            /** @enum {string} */
+            level?: "A1" | "A2" | "B1" | "B2";
+            path_order?: number;
+            theme?: string;
+            theme_th?: string;
+            /** @description Short Thai usage notes: when the pattern is used. */
+            notes?: string[];
+            forms?: {
+                label: string;
+                pattern: string;
+                sentence: string;
+                meaning: string;
+            }[];
+            signal_words?: string[];
+            common_mistakes?: components["schemas"]["EbookMistake"][];
+            compare_th?: string;
+            /** @description Listen-first comprehension items. All must be correct before a shadowing session can start. */
+            listening_items?: {
+                id: string;
+                /** @description Sent for text-to-speech; the client hides it until the item is answered. */
+                sentence: string;
+                question_th: string;
+                options: components["schemas"]["EbookOption"][];
+            }[];
+            speaking_criteria?: string[];
         };
         EbookConceptStep: {
             id: string;
@@ -1237,6 +1310,19 @@ export interface components {
             cursor?: {
                 [key: string]: unknown;
             } | null;
+            /** @description Next unit on the A1-first learning path that is not completed yet. */
+            recommended_unit_id?: string;
+            path?: {
+                total: number;
+                learned: number;
+                review?: number;
+                levels: {
+                    /** @enum {string} */
+                    level: "A1" | "A2" | "B1" | "B2";
+                    total: number;
+                    learned: number;
+                }[];
+            };
         };
         EbookUnitData: {
             unit: components["schemas"]["EbookUnit"] | components["schemas"]["EbookUnitSummary"] | null;
@@ -1313,6 +1399,7 @@ export interface components {
             percent: number;
             review_due: boolean;
         };
+        /** @description Answers keyed by quiz id (quiz-01..quiz-08) or listening id (listen-01..listen-03). */
         EbookCheckRequest: {
             /** Format: uuid */
             request_id: string;
@@ -1333,6 +1420,8 @@ export interface components {
             progress: {
                 [key: string]: unknown;
             };
+            /** @description True when every listening item of the unit has been answered correctly. */
+            listening_done?: boolean;
         };
         EbookRevealRequest: {
             ids: string[];
@@ -1363,6 +1452,24 @@ export interface components {
                 th: string;
                 note: string;
             }[];
+        };
+        /** @description A line heard before it is read. The answer and Thai meaning are returned by the check endpoint only. */
+        EbookListeningItem: {
+            id: string;
+            audio_en: string;
+            question_th: string;
+            options_th: string[];
+        };
+        EbookForm: {
+            label_th: string;
+            pattern: string;
+            example_en: string;
+            example_th: string;
+        };
+        EbookMistake: {
+            wrong: string;
+            right: string;
+            why_th: string;
         };
     };
     responses: never;

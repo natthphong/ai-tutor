@@ -18,9 +18,9 @@ export default function LessonExamples({
     <section className={`ebook-lesson-card ${preview ? "ebook-example-preview" : ""}`} aria-labelledby="ebook-examples-title">
       <div className="ebook-card-kicker"><Volume2 size={16} aria-hidden="true" /> Listen to useful examples</div>
       <h2 id="ebook-examples-title">{preview ? "See it in context" : step.title}</h2>
-      <p>{preview ? "สามตัวอย่างจากบทนี้ช่วยให้เห็น pattern ก่อนลองทำแบบฝึก" : "สามประโยคสั้น ๆ ที่คุณนำไปใช้ได้ทันที"}</p>
+      <p>{preview ? "สามตัวอย่างจากบทนี้ช่วยให้เห็น pattern ก่อนลองทำแบบฝึก" : "อ่าน ฟัง แล้วลองพูดตามทีละประโยค ก่อนไปทำแบบฝึก"}</p>
       <div className="ebook-example-list">
-        {pack.examples.slice(0, 3).map((example: EbookExample, index) => (
+        {pack.examples.slice(0, preview ? 3 : 6).map((example: EbookExample, index) => (
           <article className="ebook-example" key={`${example.sentence}-${index}`}>
             <span className="ebook-example-number">{index + 1}</span>
             <div>

@@ -16,6 +16,11 @@ export default function LessonUseIt({
       <h2 id="ebook-use-title">{step.title}</h2>
       <div className="ebook-speaking-prompt"><span className="eyebrow">LOOP COACH ASKS</span><strong>{pack.speaking_prompt}</strong>{pack.speaking_th && <p>{pack.speaking_th}</p>}</div>
       <p>พูดสองรอบด้วยรายละเอียดของคุณเอง รอบที่สองจะเปลี่ยนบริบทให้คุณนำ pattern ไปใช้จริง</p>
+      {pack.speaking_criteria.length > 0 && (
+        <ul className="ebook-notes" aria-label="Speaking success criteria">
+          {pack.speaking_criteria.map((item) => <li key={item}>{item}</li>)}
+        </ul>
+      )}
       <button type="button" className="button primary" onClick={onStart}><ArrowRight size={18} />Start speaking practice</button>
     </section>
   );

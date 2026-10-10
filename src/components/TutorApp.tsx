@@ -589,6 +589,40 @@ function Today({
         }
       />
       <div className="next-grid">
+        {data.ebook?.next_unit && (
+          <button
+            className="next-lesson card ebook-today-card"
+            onClick={() => go("ebook")}
+          >
+            <div className="lesson-art purple">
+              <BookOpen size={39} />
+              <span>
+                {data.ebook.next_unit.number.toString().padStart(3, "0")}
+              </span>
+            </div>
+            <div className="lesson-description">
+              <div className="inline-tags">
+                <span className="pill purple">{data.ebook.next_unit.level}</span>
+                <span>
+                  Learn Ebook · เรียนจบแล้ว {data.ebook.learned}/
+                  {data.ebook.total} บท
+                </span>
+              </div>
+              <h3>{data.ebook.next_unit.title}</h3>
+              <p>{data.ebook.next_unit.title_th}</p>
+              <div className="lesson-meta">
+                <Headphones size={14} />{" "}
+                {data.ebook.review_today
+                  ? `ทบทวน ${data.ebook.review_today} ข้อก่อน แล้วเรียนบทนี้ต่อ`
+                  : "อ่าน · ทำแบบฝึก · ฟัง · พูด"}{" "}
+                <span>10–15 นาที</span>
+              </div>
+            </div>
+            <span className="round-arrow">
+              <ArrowRight size={20} />
+            </span>
+          </button>
+        )}
         {l && (
           <button
             className="next-lesson card"

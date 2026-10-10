@@ -24,6 +24,7 @@ export default function UnitNavigator({
   units,
   progress,
   selected,
+  recommended,
   search,
   filter,
   onSelect,
@@ -34,6 +35,8 @@ export default function UnitNavigator({
   units: EbookUnit[];
   progress: Record<string, EbookProgress>;
   selected: string;
+  /** Next unit on the learning path, when the course provides one. */
+  recommended?: string;
   search: string;
   filter: UnitFilter;
   onSelect: (id: string) => void;
@@ -45,7 +48,7 @@ export default function UnitNavigator({
   const visible = units.filter((unit) => {
     const status = deriveLearningState(progress[unit.id]);
     const matchesFilter = filter === "all" || status === filter;
-    const matchesQuery = `${unit.number} ${unit.title}`.toLocaleLowerCase().includes(query);
+    const matchesQuery = `${unit.number} ${unit.title} ${unit.title_th || ""} ${unit.level || ""}`.toLocaleLowerCase().includes(query);
     return matchesFilter && matchesQuery;
   });
 
@@ -107,6 +110,12 @@ export default function UnitNavigator({
               <span className="ebook-unit-copy">
                 <strong>{unit.title}</strong>
                 <small>{stateLabel[status]} · {unitProgress?.percent ?? 0}%</small>
+                {(unit.level || unit.id === recommended) && (
+                  <span className="ebook-unit-tags">
+                    {unit.level && <span className={`ebook-level-tag level-${unit.level.toLowerCase()}`}>{unit.level}</span>}
+                    {unit.id === recommended && <span className="ebook-next-tag">เรียนต่อบทนี้</span>}
+                  </span>
+                )}
               </span>
               <span className={`ebook-status-dot ${status}`} aria-label={stateLabel[status]} />
             </button>

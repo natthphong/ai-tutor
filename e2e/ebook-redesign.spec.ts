@@ -218,9 +218,9 @@ for (const device of [
       await page.getByRole("button", { name: /^Next$/ }).click();
       await expect(page.getByRole("heading", { name: "Choose the grammar" })).toBeVisible();
       await page.getByRole("radio", { name: "B" }).check();
-      await page.getByRole("button", { name: "ตรวจคำตอบชุดนี้" }).click();
+      await page.getByRole("button", { name: "ตรวจคำตอบ", exact: true }).click();
       await expect(page.getByText("Failed to fetch", { exact: true })).toBeVisible();
-      await page.getByRole("button", { name: "ตรวจคำตอบชุดนี้" }).click();
+      await page.getByRole("button", { name: "ตรวจคำตอบ", exact: true }).click();
       await expect(page.getByRole("status", { name: "Quiz feedback" })).toContainText("Try again");
       expect(checkRequestIds).toHaveLength(3);
       expect(new Set(checkRequestIds).size).toBe(1);

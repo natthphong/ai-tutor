@@ -3,7 +3,7 @@ import { useState } from "react";
 import type { User } from "@/lib/types";
 import { VoiceButton } from "../ui";
 import type { EbookPack, EbookProgress, EbookWord } from "./EbookTypes";
-import { getProgressPercent } from "./EbookTypes";
+import { getProgressPercent, isListeningDone } from "./EbookTypes";
 
 export default function LessonCoach({
   pack,
@@ -19,11 +19,15 @@ export default function LessonCoach({
   const saved = progress.vocabulary_saved || {};
   const percent = getProgressPercent(progress);
   const [showAllVocabulary, setShowAllVocabulary] = useState(false);
+  // Course v2 lines are heard before they are read, so the coach keeps them
+  // hidden until the listening questions are answered.
+  const listenFirst = pack.listening_items.length > 0;
+  const showLines = pack.shadowing_sentences.length > 0 && (!listenFirst || isListeningDone(pack, progress));
   return (
     <aside className="ebook-coach-column" aria-label="Loop Coach">
       <section className="card ebook-coach-card">
         <div className="ebook-coach-heading"><div><span className="eyebrow">YOUR PRACTICE BUDDY</span><h2>Loop Coach</h2></div><MessageCircle size={20} aria-hidden="true" /></div>
-        <p>{pack.explanation}</p>
+        <p className="ebook-coach-explanation">{pack.explanation}</p>
         <div className="ebook-goal-mini"><span className="eyebrow">GOAL</span><strong>{pack.goal}</strong></div>
         <div className="ebook-progress-summary">
           <div><strong>{percent}%</strong><span>unit progress</span></div>
@@ -35,7 +39,7 @@ export default function LessonCoach({
         <div className="ebook-vocabulary-list">
           {pack.vocabulary.slice(0, 10).map((word, index) => (
             <article className={`ebook-vocabulary-word ${index >= 3 ? "ebook-vocabulary-extra" : ""}`} data-testid="ebook-vocabulary-word" key={word.term}>
-              <div className="ebook-word-copy"><strong>{word.term}</strong><span>{word.meaning}</span><small>{word.example}</small></div>
+              <div className="ebook-word-copy"><strong>{word.term}</strong><span>{word.meaning}</span><small>{word.example}</small>{word.example_th && <small className="ebook-word-th">{word.example_th}</small>}</div>
               <div className="ebook-word-actions">
                 <VoiceButton text={word.example || word.term} voice={user.profile.voice} speed={user.profile.speed} label="Listen" />
                 <button type="button" className={`icon-button ebook-save-word ${saved[word.term.toLocaleLowerCase()] ? "saved" : ""}`} aria-label={`Save ${word.term}`} onClick={() => onSaveWord(word)}><Bookmark size={16} fill={saved[word.term.toLocaleLowerCase()] ? "currentColor" : "none"} /></button>
@@ -45,14 +49,14 @@ export default function LessonCoach({
         </div>
         {pack.vocabulary.length > 3 && <button type="button" className="button small ebook-vocabulary-toggle" onClick={() => setShowAllVocabulary((current) => !current)}>{showAllVocabulary ? "Show fewer vocabulary" : `Show all ${pack.vocabulary.length} vocabulary`}</button>}
       </section>
-      {pack.shadowing_sentences.length > 0 && (
+      {showLines && (
         <section className="card ebook-shadow-source" aria-labelledby="ebook-shadow-source-title">
           <div className="ebook-coach-heading"><div><span className="eyebrow">LISTEN & SHADOW</span><h2 id="ebook-shadow-source-title">Source lines</h2></div><Volume2 size={19} aria-hidden="true" /></div>
           {pack.shadowing_sentences.map((line, index) => (
             <div className="ebook-shadow-line" key={`${line.sentence}-${index}`}>
               <strong>{line.sentence}</strong>
               {line.meaning && <span>{line.meaning}</span>}
-              <small>Source: lesson example{line.source_page ? `, page ${line.source_page}` : ""}</small>
+              {!listenFirst && <small>Source: lesson example{line.source_page ? `, page ${line.source_page}` : ""}</small>}
             </div>
           ))}
         </section>

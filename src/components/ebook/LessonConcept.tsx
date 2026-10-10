@@ -1,4 +1,4 @@
-import { Lightbulb, Sparkles } from "lucide-react";
+import { AlertTriangle, Lightbulb, Sparkles } from "lucide-react";
 import type { EbookPack, EbookStep } from "./EbookTypes";
 
 export default function LessonConcept({
@@ -24,9 +24,53 @@ export default function LessonConcept({
         <strong>{pack.pattern}</strong>
       </div>
       {pack.notes.length > 0 && (
-        <ul className="ebook-notes">
-          {pack.notes.map((note) => <li key={note}>{note}</li>)}
-        </ul>
+        <div className="ebook-concept-block">
+          <span className="eyebrow">WHEN TO USE IT · ใช้เมื่อไร</span>
+          <ul className="ebook-notes">
+            {pack.notes.map((note) => <li key={note}>{note}</li>)}
+          </ul>
+        </div>
+      )}
+      {pack.forms.length > 0 && (
+        <div className="ebook-concept-block">
+          <span className="eyebrow">FORMS · รูปประโยค</span>
+          <div className="ebook-forms">
+            {pack.forms.map((form) => (
+              <article className="ebook-form" key={`${form.label}-${form.pattern}`}>
+                <span className="pill neutral">{form.label}</span>
+                <code>{form.pattern}</code>
+                <strong>{form.sentence}</strong>
+                {form.meaning && <span>{form.meaning}</span>}
+              </article>
+            ))}
+          </div>
+        </div>
+      )}
+      {pack.signal_words.length > 0 && (
+        <div className="ebook-concept-block">
+          <span className="eyebrow">SIGNAL WORDS · คำที่มักมาคู่กัน</span>
+          <div className="ebook-signal-words">{pack.signal_words.map((word) => <span className="pill neutral" key={word}>{word}</span>)}</div>
+        </div>
+      )}
+      {pack.common_mistakes.length > 0 && (
+        <div className="ebook-concept-block">
+          <span className="eyebrow"><AlertTriangle size={13} aria-hidden="true" /> COMMON MISTAKES · จุดที่คนไทยมักพลาด</span>
+          <div className="ebook-mistakes">
+            {pack.common_mistakes.map((mistake) => (
+              <article className="ebook-mistake" key={mistake.wrong}>
+                <span className="ebook-mistake-wrong"><span aria-hidden="true">✗</span> <s>{mistake.wrong}</s></span>
+                <strong className="ebook-mistake-right"><span aria-hidden="true">✓</span> {mistake.right}</strong>
+                <small>{mistake.why_th}</small>
+              </article>
+            ))}
+          </div>
+        </div>
+      )}
+      {pack.compare_th && (
+        <div className="ebook-concept-block ebook-compare">
+          <span className="eyebrow">DON&apos;T MIX UP · อย่าสับสนกับ</span>
+          <p>{pack.compare_th}</p>
+        </div>
       )}
       <div className="ebook-tip"><Lightbulb size={18} aria-hidden="true" /><span>เริ่มจากความหมาย แล้วเติมรายละเอียดของคุณเอง</span></div>
       {onExplain && <button type="button" className="button small" onClick={onExplain}>Explain this pattern</button>}

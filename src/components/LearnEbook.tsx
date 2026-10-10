@@ -17,6 +17,8 @@ import UnitNavigator, { type UnitFilter } from "./ebook/UnitNavigator";
 import {
   deriveLearningState,
   getActiveStepIndex,
+  inPathOrder,
+  isListeningDone,
   isLegacyPack,
   isGuidedCatalog,
   mergeDetailProgress,
@@ -24,6 +26,7 @@ import {
   normalizeDetail,
   type EbookCatalog,
   type EbookDetail,
+  type EbookListeningItem,
   type EbookProgress,
   type EbookQuestion,
   type EbookWord,
@@ -61,6 +64,7 @@ export default function LearnEbook({
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<UnitFilter>("all");
   const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [listenAnswers, setListenAnswers] = useState<Record<string, string>>({});
   const [marks, setMarks] = useState<Record<string, QuizMark>>({});
   const [reveals, setReveals] = useState<Record<string, { answers: string[]; explanation_th: string }>>({});
   const [page, setPage] = useState(1);
@@ -137,6 +141,7 @@ export default function LearnEbook({
       setDetail(nextDetail);
       setPage(nextPage);
       setAnswers(nextAnswers);
+      setListenAnswers({});
       setActiveStep(nextStep);
       setMarks({});
       setReveals({});
@@ -157,8 +162,14 @@ export default function LearnEbook({
         if (!mounted) return;
         const next = normalizeCatalog(raw);
         setBook(next);
-        const cursorId = next.cursor?.unit_id && next.units.some((unit) => unit.id === next.cursor?.unit_id) ? next.cursor.unit_id : next.units[0]?.id;
-        if (cursorId) void openUnit(cursorId, next.cursor?.page, next);
+        const has = (id?: string) => Boolean(id && next.units.some((unit) => unit.id === id));
+        const cursorId = has(next.cursor?.unit_id) ? next.cursor?.unit_id : undefined;
+        const cursorPercent = cursorId ? next.progress[cursorId]?.percent ?? 0 : 0;
+        // Resume a unit that is under way; otherwise follow the learning
+        // path (A1 first) instead of source-book order.
+        const recommended = has(next.recommended_unit_id) ? next.recommended_unit_id : undefined;
+        const startId = recommended && !(cursorId && cursorPercent > 0 && cursorPercent < 100) ? recommended : cursorId || next.units[0]?.id;
+        if (startId) void openUnit(startId, startId === cursorId ? next.cursor?.page : undefined, next);
       })
       .catch((e) => {
         if (mounted) setError((e as Error).message);
@@ -211,19 +222,26 @@ export default function LearnEbook({
     });
   }
 
-  async function checkAnswers() {
+  async function checkAnswers(only?: string[]) {
     if (!detail || !selected) return;
     setBusy(true);
     setError("");
     try {
       await saveDraft();
-      const payload = Object.fromEntries(detail.pack.questions
-        .filter((question) => !question.example && Boolean(answers[question.id]?.trim()))
+      // One question is checked at a time, so an answer that is already
+      // correct is never sent (or billed) again.
+      const payload: Record<string, string> = Object.fromEntries(detail.pack.questions
+        .filter((question) => !question.example && Boolean(answers[question.id]?.trim()) && (!only || only.includes(question.id)))
         .map((question) => {
           const answer = answers[question.id].trim();
           const option = question.options.find((candidate) => candidate.id === answer);
           return [question.id, option?.text || answer];
         }));
+      for (const item of detail.pack.listening_items) {
+        const chosen = item.options.find((candidate) => candidate.id === listenAnswers[item.id]);
+        if (chosen && only?.includes(item.id)) payload[item.id] = chosen.text;
+      }
+      if (!Object.keys(payload).length) return;
       const fingerprint = JSON.stringify(payload);
       const requestId = quizRequest.current?.fingerprint === fingerprint
         ? quizRequest.current.requestId
@@ -256,6 +274,16 @@ export default function LearnEbook({
     }
   }
 
+  function answerListening(item: EbookListeningItem, optionId: string) {
+    setListenAnswers((current) => ({ ...current, [item.id]: optionId }));
+    quizRequest.current = undefined;
+    setMarks((current) => {
+      const copy = { ...current };
+      delete copy[item.id];
+      return copy;
+    });
+  }
+
   function retryQuestion(question: EbookQuestion) {
     setMarks((current) => {
       const next = { ...current };
@@ -286,6 +314,11 @@ export default function LearnEbook({
 
   async function startSession(mode: "shadowing" | "speak" | "listening") {
     if (!selected) return;
+    if (mode !== "speak" && detail && !isListeningDone(detail.pack, detail.progress)) {
+      setActiveStep(3);
+      setNotice("ฟังและตอบคำถามให้ครบ 3 ประโยคก่อน แล้วจึงเริ่มพูดตาม");
+      return;
+    }
     setBusy(true);
     setError("");
     try {
@@ -318,25 +351,25 @@ export default function LearnEbook({
   return (
     <>
       <div className="page-intro ebook-page-intro">
-        <div><span className="eyebrow">READ · TRY · LISTEN · SPEAK</span><h1>Learn Ebook</h1><p>Build one useful English pattern in 8–12 minutes, then loop it into your own words.</p></div>
-        <div className="ebook-intro-meta"><span><BookOpen size={16} />{book.units.length} units</span><span><Clock3 size={16} />8–12 min each</span><button type="button" className="button small" onClick={review}>Review due units</button></div>
+        <div><span className="eyebrow">READ · TRY · LISTEN · SPEAK</span><h1>Learn Ebook</h1><p>Build one useful English pattern in 10–15 minutes, then loop it into your own words.</p></div>
+        <div className="ebook-intro-meta"><span><BookOpen size={16} />{book.units.length} units</span><span><Clock3 size={16} />10–15 min each</span>{book.path && <span className="ebook-path-meta" aria-label="Course path progress">{book.path.levels.map((level) => `${level.level} ${level.learned}/${level.total}`).join(" · ")}</span>}<button type="button" className="button small" onClick={review}>Review due units</button></div>
       </div>
       <ErrorMessage message={error} />
       {notice && <div className="notice ebook-live-notice" role="status" aria-live="polite">{notice}</div>}
       <div className="ebook-course-layout">
-        <UnitNavigator units={book.units} progress={book.progress} selected={selected} search={search} filter={filter} onSelect={(id) => void openUnit(id)} onSearch={setSearch} onFilter={setFilter} disabled={busy} />
+        <UnitNavigator units={inPathOrder(book.units)} progress={book.progress} recommended={book.recommended_unit_id} selected={selected} search={search} filter={filter} onSelect={(id) => void openUnit(id)} onSearch={setSearch} onFilter={setFilter} disabled={busy} />
         <main className="ebook-lesson-column">
           {!detail || !pack || !currentStep ? <div className="card ebook-lesson-card"><h2>Select a unit to begin</h2><p>Choose a unit from the course list and follow one step at a time.</p></div> : <>
-            <div className="ebook-lesson-heading"><div><span className="eyebrow">UNIT {detail.unit.number}</span><h2 aria-label="Unit lesson title">{detail.unit.title}</h2><p>{detail.pack.goal}</p></div><span className={`ebook-state-badge ${progressState}`}>{progressState}</span></div>
+            <div className="ebook-lesson-heading"><div><span className="eyebrow">UNIT {detail.unit.number}{pack.level ? ` · ${pack.level}` : ""}{pack.theme_th ? ` · ${pack.theme_th}` : ""}</span><h2 aria-label="Unit lesson title">{detail.unit.title}</h2>{pack.title_th && <p className="ebook-title-th">{pack.title_th}</p>}<p>{detail.pack.goal}</p></div><span className={`ebook-state-badge ${progressState}`}>{progressState}</span></div>
             <LessonStepper steps={pack.concept_steps} activeIndex={activeStep} onSelect={(index) => moveToStep(index)} />
-            <div className="ebook-step-meta"><span>Step {activeStep + 1} of 5 · about {activeStep === 2 ? 3 : 2} min</span><div className="ebook-progress-track" role="progressbar" aria-label="Lesson steps" aria-valuenow={activeStep + 1} aria-valuemin={0} aria-valuemax={5}><span style={{ width: `${((activeStep + 1) / 5) * 100}%` }} /></div><OriginalBookDialog book={pack.original_book} pageCount={book.page_count} /></div>
+            <div className="ebook-step-meta"><span>Step {activeStep + 1} of 5 · about {activeStep === 2 ? 4 : activeStep === 3 ? 3 : 2} min</span><div className="ebook-progress-track" role="progressbar" aria-label="Lesson steps" aria-valuenow={activeStep + 1} aria-valuemin={0} aria-valuemax={5}><span style={{ width: `${((activeStep + 1) / 5) * 100}%` }} /></div><OriginalBookDialog book={pack.original_book} pageCount={book.page_count} /></div>
             {activeStep === 0 && <>
               <LessonConcept pack={pack} step={currentStep} onExplain={() => setNotice("ลองอ่าน goal และ pattern ออกเสียงหนึ่งรอบ แล้วเติมรายละเอียดของคุณเอง")} />
               <LessonExamples pack={pack} step={pack.concept_steps[1] || currentStep} user={user} preview />
             </>}
             {activeStep === 1 && <LessonExamples pack={pack} step={currentStep} user={user} />}
-            {activeStep === 2 && <LessonQuiz questions={pack.questions} answers={answers} marks={marks} reveals={reveals} onAnswer={answerQuestion} onCheck={() => void checkAnswers()} onReveal={(question) => void revealAnswer(question)} onRetry={retryQuestion} disabled={busy} />}
-            {activeStep === 3 && <LessonShadowing pack={pack} step={currentStep} user={user} onStart={() => void startSession("shadowing")} />}
+            {activeStep === 2 && <LessonQuiz questions={pack.questions} answers={answers} marks={marks} reveals={reveals} scores={detail.progress.quiz_scores} onAnswer={answerQuestion} onCheck={(question) => void checkAnswers([question.id])} onReveal={(question) => void revealAnswer(question)} onRetry={retryQuestion} disabled={busy} />}
+            {activeStep === 3 && <LessonShadowing pack={pack} step={currentStep} user={user} progress={detail.progress} answers={listenAnswers} marks={marks} onAnswer={answerListening} onCheck={(item) => void checkAnswers([item.id])} onStart={() => void startSession("shadowing")} disabled={busy} />}
             {activeStep === 4 && <LessonUseIt pack={pack} step={currentStep} onStart={() => void startSession("speak")} />}
             {legacy && <LegacyExerciseCard detail={detail} answers={answers} marks={marks} reveals={reveals} onAnswer={answerQuestion} onCheck={() => void checkAnswers()} onReveal={(question) => void revealAnswer(question)} disabled={busy} />}
             <div className="ebook-primary-actions" aria-label="Lesson actions"><button type="button" className="button" onClick={() => setNotice(pack.explanation)}><Lightbulb size={17} />Explain</button><button type="button" className="button" onClick={() => { if (activeStep >= 3) void startSession(activeStep === 3 ? "shadowing" : "speak"); else moveToStep(Math.max(2, activeStep)); }} disabled={busy}><ArrowRight size={17} />Practice</button><button type="button" className="button primary" onClick={() => moveToStep(activeStep === 4 ? 4 : activeStep + 1, true)} disabled={busy || activeStep >= 4}>Next <ArrowRight size={17} /></button></div>
