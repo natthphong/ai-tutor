@@ -279,6 +279,40 @@ for (const device of [
   });
 }
 
+test("a slow save of an earlier step never moves the learner back", async ({ page }) => {
+  const saved: number[] = [];
+  let firstSeen: () => void = () => {};
+  let release: () => void = () => {};
+  const firstRequest = new Promise<void>((resolve) => { firstSeen = resolve; });
+  const firstResponse = new Promise<void>((resolve) => { release = resolve; });
+  let first = true;
+  await installCourse(page);
+  // Registered last, so it handles progress saves before the course mock.
+  await page.route("**/api/ebook/units/*/progress", async (route) => {
+    const body = route.request().postDataJSON() as { current_step?: number };
+    if (first) {
+      first = false;
+      // Hold the save of step 1 until the learner has moved to another step.
+      firstSeen();
+      await firstResponse;
+    }
+    if (typeof body.current_step === "number") saved.push(body.current_step);
+    return route.fulfill({ json: { saved: true, progress: { current_step: body.current_step } } });
+  });
+  await page.goto("/?view=ebook");
+  await expect(page.getByRole("heading", { name: "Unit lesson title" })).toHaveText("Present simple");
+  await firstRequest;
+  await page.getByRole("listitem", { name: "Quick practice" }).getByRole("button").click();
+  await expect(page.getByRole("listitem", { name: "Quick practice" })).toHaveAttribute("aria-current", "step");
+  // The stale answer for step 1 arrives before the debounced save of step 3.
+  await page.waitForTimeout(250);
+  release();
+  await expect.poll(() => saved.length, { timeout: 8000 }).toBeGreaterThanOrEqual(2);
+  await page.waitForTimeout(1200);
+  expect(saved[0]).toBe(1);
+  expect(saved.at(-1)).toBe(3);
+});
+
 test("Today sends the learner to the next Ebook unit after capped review", async ({ page }) => {
   await page.route("**/api/**", async (route) => {
     const path = new URL(route.request().url()).pathname.replace(/^\/api/, "");

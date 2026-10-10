@@ -90,7 +90,9 @@ export default function LearnEbook({
           setDetail((current) => current && current.unit.id === snapshot.id ? { ...current, progress: { ...current.progress, ...result.progress } } : current);
           setBook((current) => current ? { ...current, progress: { ...current.progress, [snapshot.id]: { ...(current.progress[snapshot.id] || {}), ...result.progress } } } : current);
           if (draft.current.id === snapshot.id) {
-            draft.current.currentStep = result.progress.current_step ?? draft.current.currentStep;
+            // A slow response to an earlier save must not move the learner
+            // back: adopt the saved step only if they have not moved since.
+            if (draft.current.currentStep === snapshot.currentStep) draft.current.currentStep = result.progress.current_step ?? draft.current.currentStep;
             draft.current.completedSteps = { ...draft.current.completedSteps, ...(result.progress.completed_steps || {}) };
           }
         }
