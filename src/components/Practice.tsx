@@ -25,6 +25,7 @@ import { VoiceRecorder } from "@/features/audio/recorder";
 import { LiveVoice } from "@/features/audio/live";
 import ListeningPractice from "./ListeningPractice";
 import EbookShadowingPractice from "./EbookShadowingPractice";
+import EbookUnitResult from "./ebook/EbookUnitResult";
 import { Mascot, Loading, ErrorMessage, VoiceButton } from "./ui";
 export default function Practice({
   id,
@@ -307,6 +308,7 @@ export default function Practice({
   const drill = l.drills?.[s.state.step];
   const isLiveMode = s.mode === "live";
   const completeStatus = s.status === "completed";
+  const ebookLessonId = typeof sessionState.ebook_lesson_id === "string" ? sessionState.ebook_lesson_id : "";
   const subtitle = pattern
     ? "เรียน pattern"
     : s.state.stage === "drill"
@@ -378,7 +380,7 @@ export default function Practice({
           <div className="lesson-progress-heading"><strong>ความคืบหน้าการฝึกบทนี้</strong><strong>{s.progress.percent}%</strong></div>
           <div className="lesson-progress-track" role="progressbar" aria-label="ความคืบหน้าการฝึกบทนี้" aria-valuenow={s.progress.percent} aria-valuemin={0} aria-valuemax={100}><div style={{width: `${s.progress.percent}%`}} /></div>
           <p>{s.progress.total_drills > 0 && <>ฝึก {s.progress.completed_drills}/{s.progress.total_drills} แบบ · </>}พูดเองในบริบทใหม่ {s.progress.independent_conversations}/{s.progress.required_conversations} ครั้ง</p>
-          <small>{s.progress.ready_to_complete ? "พูดได้เองครบเกณฑ์แล้ว เก็บผลและจบบทให้แล้ว" : completeStatus ? "คุณเลือกจบก่อนครบเกณฑ์ กลับมาฝึกซ้ำได้เสมอ" : "เมื่อครบเกณฑ์จะจบบทให้อัตโนมัติ หรือกดจบการฝึกก่อนได้ · ถ้ายังไม่จบ กลับมาเรียนต่อจากจุดนี้ได้"}</small>
+          <small>{s.progress.ready_to_complete ? (ebookLessonId ? "พูดได้เองครบ 2 ครั้ง ขั้นพูดของบทนี้ผ่านแล้ว" : "พูดได้เองครบเกณฑ์แล้ว เก็บผลและจบบทให้แล้ว") : completeStatus ? (ebookLessonId ? "จบก่อนครบ 2 ครั้ง ขั้นพูดของบทนี้ยังไม่ผ่าน กลับมาฝึกใหม่ได้" : "คุณเลือกจบก่อนครบเกณฑ์ กลับมาฝึกซ้ำได้เสมอ") : "เมื่อครบเกณฑ์จะจบบทให้อัตโนมัติ หรือกดจบการฝึกก่อนได้ · ถ้ายังไม่จบ กลับมาเรียนต่อจากจุดนี้ได้"}</small>
         </div>
       )}
       {!isLiveMode && !completeStatus && <label className="card auto-audio-setting"><input type="checkbox" checked={!!s.state.auto_audio} onChange={(e)=>void changeAutoAudio(e.target.checked)} disabled={busy || recording} /><span><strong>ฟังเสียงตอบของ Loop อัตโนมัติ</strong><small>สร้างเสียงภาษาอังกฤษพร้อมคำตอบ อาจรอเพิ่มเล็กน้อยและใช้โควตาเสียง</small></span></label>}
@@ -432,9 +434,13 @@ export default function Practice({
               </button>
             </p>
           ) : null}
-          <button className="button primary" onClick={onBack}>
-            กลับไปดูแผนวันนี้ <ArrowRight size={18} />
-          </button>
+          {ebookLessonId ? (
+            <EbookUnitResult unitId={ebookLessonId} onBack={onBack} />
+          ) : (
+            <button className="button primary" onClick={onBack}>
+              กลับไปดูแผนวันนี้ <ArrowRight size={18} />
+            </button>
+          )}
         </div>
       ) : (
         <div className="session-grid">

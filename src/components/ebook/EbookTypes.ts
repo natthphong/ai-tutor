@@ -675,3 +675,30 @@ export function isLegacyPack(pack: EbookPack): boolean {
 export function mergeDetailProgress(detail: EbookDetail, progress: EbookProgress): EbookDetail {
   return { ...detail, progress: { ...detail.progress, ...progress } };
 }
+
+export const COURSE_STEPS = STEP_FALLBACKS;
+export type CourseStepId = (typeof STEP_FALLBACKS)[number]["id"];
+
+/** What the learner still has to do in each step, in plain Thai. */
+export const STEP_TASK_TH: Record<CourseStepId, string> = {
+  understand: "อ่านคำอธิบาย",
+  examples: "อ่านตัวอย่าง",
+  quiz: "ทำแบบฝึกให้ถูกครบ 8 ข้อ",
+  shadowing: "ฟังแล้วตอบ 3 ข้อ และพูดตาม 3 ประโยค",
+  speaking: "พูดเองให้ผ่าน 2 ครั้ง",
+};
+
+export function isStepDone(progress: EbookProgress, id: CourseStepId): boolean {
+  return asRecord(progress.completed_steps)[id] === true;
+}
+
+/** Steps that are not finished yet, in course order. Empty means 100%. */
+export function openSteps(progress: EbookProgress): CourseStepId[] {
+  return STEP_FALLBACKS.map((step) => step.id).filter((id) => !isStepDone(progress, id));
+}
+
+/** Index of the first unfinished step; the last step when all are done. */
+export function firstOpenStepIndex(progress: EbookProgress): number {
+  const index = STEP_FALLBACKS.findIndex((step) => !isStepDone(progress, step.id));
+  return index >= 0 ? index : STEP_FALLBACKS.length - 1;
+}

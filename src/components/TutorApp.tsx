@@ -66,14 +66,15 @@ type View =
  | "ebook";
 const nav = [
   { id: "today", label: "วันนี้", en: "Today", icon: House },
-  { id: "ebook", label: "Learn Ebook", en: "Grammar book", icon: BookOpen },
+  { id: "ebook", label: "Learn Ebook", short: "Ebook", en: "Grammar book", icon: BookOpen },
   { id: "curriculum", label: "หลักสูตร", en: "Learn", icon: BookOpen },
   { id: "practice", label: "ฝึกพูด", en: "Speak", icon: Mic },
-  { id: "daily-meet", label: "Daily Meet", en: "My daily", icon: MessagesSquare },
-  { id: "library", label: "คลังของฉัน", en: "My collection", icon: Library },
+  { id: "daily-meet", label: "Daily Meet", short: "Daily", en: "My daily", icon: MessagesSquare },
+  { id: "library", label: "คลังของฉัน", short: "คลัง", en: "My collection", icon: Library },
   {
     id: "progress",
     label: "ความก้าวหน้า",
+    short: "ก้าวหน้า",
     en: "Progress",
     icon: ChartNoAxesCombined,
   },
@@ -304,7 +305,16 @@ export default function TutorApp() {
               onResume={openSession}
               user={user}
               onBack={() => {
-                go(new URLSearchParams(location.search).get("from") === "ebook" ? "ebook" : "today");
+                const query = new URLSearchParams(location.search);
+                if (query.get("from") === "ebook") {
+                  // Return to the unit the practice belongs to, not to the
+                  // next recommended one.
+                  const unit = query.get("unit");
+                  setView("ebook");
+                  setSessionId("");
+                  setMobileMenu(false);
+                  history.pushState({}, "", unit ? `/?view=ebook&unit=${encodeURIComponent(unit)}&continue=1` : "/?view=ebook");
+                } else go("today");
                 void reload();
               }}
             />
@@ -325,8 +335,8 @@ export default function TutorApp() {
               {view === "practice" && (
                 <PracticeHome user={user} start={start} resume={openSession} />
               )}
-              {view === "ebook" && <LearnEbook user={user} resume={(id) => {openSession(id);history.replaceState({}, "", `/?view=practice&session=${id}&from=ebook`)}} review={() => go("review")} />}
-              {view === "daily-meet" && <DailyMeet user={user} resume={openSession} />}
+              {view === "ebook" && <LearnEbook user={user} resume={(id, unitId) => {openSession(id);history.replaceState({}, "", `/?view=practice&session=${id}&from=ebook&unit=${encodeURIComponent(unitId)}`)}} review={() => go("review")} />}
+              {view === "daily-meet" && <DailyMeet user={user} resume={openSession} openUnit={(unitId) => { setView("ebook"); setMobileMenu(false); history.pushState({}, "", `/?view=ebook&unit=${encodeURIComponent(unitId)}`); }} />}
               {view === "library" && <LibraryPage user={user} />}
               {view === "progress" && <ProgressPage progress={progress} />}{" "}
               {view === "settings" && (
@@ -367,7 +377,7 @@ export default function TutorApp() {
             onClick={() => go(n.id)}
           >
             <n.icon size={21} />
-            <span>{n.label}</span>
+            <span>{("short" in n && n.short) || n.label}</span>
           </button>
         ))}
       </nav>

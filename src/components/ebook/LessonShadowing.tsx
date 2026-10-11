@@ -2,7 +2,7 @@ import { Check, EarOff, Headphones, Mic, Volume2, X } from "lucide-react";
 import type { User } from "@/lib/types";
 import { VoiceButton } from "../ui";
 import type { EbookListeningItem, EbookPack, EbookProgress, EbookStep, QuizMark } from "./EbookTypes";
-import { isListeningDone } from "./EbookTypes";
+import { isListeningDone, isStepDone } from "./EbookTypes";
 
 export default function LessonShadowing({
   pack,
@@ -30,13 +30,19 @@ export default function LessonShadowing({
   const listenFirst = pack.listening_items.length > 0;
   const scores = progress.listening_scores || {};
   const listened = !listenFirst || isListeningDone(pack, progress);
+  const shadowed = isStepDone(progress, "shadowing");
+  const heard = pack.listening_items.filter((item) => scores[item.id] === true || marks[item.id]?.correct === true).length;
   return (
     <section className="ebook-lesson-card ebook-shadowing-card" aria-labelledby="ebook-shadowing-title">
       <div className="ebook-card-kicker"><Headphones size={16} aria-hidden="true" /> Listen and shadow</div>
       <h2 id="ebook-shadowing-title">{step.title}</h2>
       {listenFirst ? (
         <>
-          <p>ฟังก่อนโดยยังไม่เห็นข้อความ ตอบคำถามจากสิ่งที่ได้ยิน เมื่อตอบถูกครบ 3 ประโยคจึงเปิดข้อความให้พูดตาม</p>
+          <p>ขั้นนี้มี 2 ส่วน ต้องทำครบทั้งสองส่วนจึงนับว่าเสร็จ: ฟังแล้วตอบคำถามโดยยังไม่เห็นข้อความ จากนั้นพูดตามด้วยเสียงของคุณ</p>
+          <ol className="ebook-step-parts" aria-label="Parts of this step">
+            <li className={listened ? "done" : "open"} data-testid="ebook-part-listen"><span className="ebook-part-mark">{listened ? <Check size={14} aria-hidden="true" /> : 1}</span><span><strong>ฟังแล้วตอบ</strong><small>{listened ? "ครบ 3 ข้อแล้ว" : `ตอบถูก ${heard}/${pack.listening_items.length} ข้อ`}</small></span></li>
+            <li className={shadowed ? "done" : "open"} data-testid="ebook-part-shadow"><span className="ebook-part-mark">{shadowed ? <Check size={14} aria-hidden="true" /> : 2}</span><span><strong>พูดตาม 3 ประโยค</strong><small>{shadowed ? "พูดตามครบแล้ว" : listened ? "ยังไม่ได้ทำ — กดปุ่มด้านล่าง" : "เปิดหลังฟังครบ"}</small></span></li>
+          </ol>
           <div className="ebook-listening-list" aria-label="Listening questions">
             {pack.listening_items.map((item, index) => {
               const mark = marks[item.id];
@@ -75,7 +81,8 @@ export default function LessonShadowing({
               );
             })}
           </div>
-          {listened && <div className="ebook-shadowing-note"><Mic size={17} aria-hidden="true" /><span>ฟังครบแล้ว ต่อไปพูดตามทั้ง 3 ประโยคด้วยเสียงของคุณ ระบบนับเฉพาะเสียงที่อัดชัดเจน</span></div>}
+          {listened && !shadowed && <div className="ebook-shadowing-note"><Mic size={17} aria-hidden="true" /><span>ฟังครบแล้ว เหลือพูดตามทั้ง 3 ประโยคด้วยเสียงของคุณ ระบบนับเฉพาะเสียงที่อัดชัดเจน</span></div>}
+          {shadowed && <div className="ebook-shadowing-note done"><Check size={17} aria-hidden="true" /><span>ขั้นนี้เสร็จแล้ว จะพูดตามซ้ำอีกรอบก็ได้</span></div>}
         </>
       ) : (
         <>
@@ -94,7 +101,7 @@ export default function LessonShadowing({
           <div className="ebook-shadowing-note"><Mic size={17} aria-hidden="true" /><span>Typing can help you follow along, but only a clear recorded attempt completes a line.</span></div>
         </>
       )}
-      <button type="button" className="button primary" onClick={onStart} disabled={disabled || !pack.shadowing_sentences.length || !listened}>{listened ? <Mic size={18} /> : <Volume2 size={18} />}{listened ? "Start shadowing practice" : "ฟังให้ครบ 3 ประโยคก่อน"}</button>
+      <button type="button" className="button primary" onClick={onStart} disabled={disabled || !pack.shadowing_sentences.length || !listened}>{listened ? <Mic size={18} /> : <Volume2 size={18} />}{!listened ? "ฟังให้ครบ 3 ประโยคก่อน" : shadowed ? "พูดตามอีกรอบ" : "Start shadowing practice"}</button>
     </section>
   );
 }

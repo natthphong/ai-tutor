@@ -3672,3 +3672,197 @@ audio {
 /* Settings: reset learning data */
 .button.danger{background:#b4533f;border-color:#b4533f;color:#fff}.button.danger:hover:not(:disabled){background:#9c4333}.button.danger:disabled{opacity:.45;cursor:not-allowed}.reset-zone{display:flex;flex-direction:column;align-items:flex-start;gap:10px}.reset-zone>p{font-size:13px;line-height:1.8;margin:0}.reset-dialog{width:min(560px,100%);max-height:calc(100dvh - 40px);overflow:auto;padding:23px;display:flex;flex-direction:column;gap:14px;box-shadow:0 24px 70px #2a2c1f33}.reset-warning{display:flex;align-items:flex-start;gap:9px;padding:12px 14px;border-radius:12px;background:#fff0ea;color:#9d4a3a;font-size:13px;line-height:1.7}.reset-warning svg{flex-shrink:0;margin-top:3px}.reset-lists{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.reset-lists strong{font-size:12px}.reset-lists ul{margin:6px 0 0;padding-left:18px;font-size:12px;line-height:1.75;color:#6f7565}.reset-scope{padding:12px 14px;border:1px solid var(--line);border-radius:12px}.reset-dialog label>input:not([type=checkbox]){margin-top:6px}.reset-actions{display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap}.reset-dialog .error{color:#9d4a3a;font-size:13px}
 @media (max-width:650px){.reset-lists{grid-template-columns:1fr}.reset-dialog{padding:18px}.reset-actions .button{flex:1}}
+
+/* ── Unit status: what is done, what is still open ───────────────────────── */
+.ebook-stepper li.skipped{background:#fff5ec;border-color:#f3d9bf}
+.ebook-stepper li.skipped .ebook-step-number{background:#fde3c8;color:#a8632a}
+.ebook-stepper li.skipped small{color:#a8632a;font-weight:600}
+.ebook-step-parts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;list-style:none;margin:14px 0 4px;padding:0}
+.ebook-step-parts li{display:flex;align-items:center;gap:10px;padding:11px 13px;border:1px solid var(--line);border-radius:13px;background:#fbfaf3;min-width:0}
+.ebook-step-parts li.done{background:#f3f8ee;border-color:#d9e8d1}
+.ebook-step-parts li>span:last-child{display:flex;flex-direction:column;min-width:0}
+.ebook-step-parts strong{font-size:13px;font-weight:600;line-height:1.5}
+.ebook-step-parts small{font-size:11px;color:#7d8472;line-height:1.5}
+.ebook-part-mark{display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;width:26px;height:26px;border-radius:50%;background:#f1efe2;color:#7b7a63;font-size:12px;font-weight:650}
+.ebook-step-parts li.done .ebook-part-mark{background:#deedd5;color:#55784e}
+.ebook-shadowing-note.done{background:#eef6e9;color:#55784e}
+.ebook-next-up{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:17px 18px;border:1px solid #ece8d5;border-radius:16px;background:#faf8ee}
+.ebook-next-up.done{background:#f1f7ec;border-color:#d7e6cf}
+.ebook-next-up>div{display:flex;flex-direction:column;gap:8px;min-width:0}
+.ebook-next-up strong{font-size:16px;font-weight:650}
+.ebook-next-up p{font-size:12px;color:#6c7563;line-height:1.7}
+.ebook-next-up .eyebrow{font-size:10px;letter-spacing:.06em;color:#8a7a45}
+.ebook-next-up.done .eyebrow{color:#5f8257}
+.ebook-next-up .button{flex-shrink:0}
+.ebook-open-steps{display:flex;flex-wrap:wrap;gap:6px;list-style:none;margin:0;padding:0}
+.ebook-open-steps li{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:999px;font-size:12px;line-height:1.5;background:#fff;border:1px solid #e6e2cd;min-width:0}
+.ebook-open-steps li.done{background:#e9f2e3;border-color:#d6e6cd;color:#567650}
+.ebook-open-steps li.open span{font-weight:600}
+.ebook-open-steps li small{color:#8b7f58;font-size:11px}
+.ebook-prompt-card{display:flex;flex-direction:column;gap:12px;padding:20px;border:1px solid var(--line);border-radius:18px;background:#fff}
+.ebook-prompt-card h3{font-size:17px;margin:6px 0 6px}
+.ebook-prompt-card p{font-size:13px;line-height:1.8;color:#666d5c}
+.ebook-prompt-actions{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.ebook-prompt-actions span{font-size:12px;color:#5f8257}
+.ebook-prompt-card summary{cursor:pointer;font-size:13px;font-weight:600;color:#666f57;padding:4px 0}
+.ebook-prompt-text{margin:10px 0 0;padding:14px;border-radius:12px;background:#f8f7ef;font:12px/1.7 ui-monospace,SFMono-Regular,Menlo,monospace;white-space:pre-wrap;overflow-wrap:anywhere;max-height:320px;overflow:auto;user-select:all}
+.ebook-unit-result{display:flex;flex-direction:column;gap:14px;width:100%;max-width:460px;margin:6px auto 0;padding:18px;border-radius:16px;border:1px solid #ece8d5;background:#faf8ee;text-align:left}
+.ebook-unit-result.done{background:#f1f7ec;border-color:#d7e6cf}
+.ebook-unit-result-head{display:flex;align-items:center;gap:14px}
+.ebook-unit-result-percent{display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;width:64px;height:64px;border-radius:50%;background:#fff;border:3px solid #e9cf74;font-size:17px;font-weight:700;font-variant-numeric:tabular-nums}
+.ebook-unit-result.done .ebook-unit-result-percent{border-color:#8fb685;color:#4e7347}
+.ebook-unit-result h3{font-size:17px;margin:0 0 2px}
+.ebook-unit-result p{font-size:12px;line-height:1.7;color:#6c7563}
+.ebook-unit-result-steps{display:grid;gap:7px;list-style:none;margin:0;padding:0}
+.ebook-unit-result-steps li{display:flex;align-items:flex-start;gap:9px;font-size:13px;line-height:1.5}
+.ebook-unit-result-steps li svg{flex-shrink:0;margin-top:3px}
+.ebook-unit-result-steps li.done{color:#55784e}
+.ebook-unit-result-steps li.open svg{color:#c08a3e}
+.ebook-unit-result-steps li>span{display:flex;flex-direction:column}
+.ebook-unit-result-steps strong{font-weight:600}
+.ebook-unit-result-steps small{font-size:11px;color:#8b7f58}
+.ebook-unit-result .button{align-self:stretch}
+
+/* ── Daily Meet: sentences, grammar units and the speaking drill ─────────── */
+.daily-entry-view{display:grid;gap:16px;margin:24px 0}
+.daily-entry-view>.daily-editor{margin:0}
+.daily-sentences{padding:24px;min-width:0}
+.daily-sentences-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.daily-sentences-head h2{font-size:22px;margin:6px 0 4px}
+.daily-sentences-head h2 small{font-size:13px;font-weight:500;color:#8b8d82;margin-left:6px}
+.daily-sentences-head p{font-size:13px;color:#6c7563}
+.daily-analyze{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-top:16px;padding:13px 15px;border-radius:13px;background:#fff9e6;border:1px solid #f4e8b9}
+.daily-analyze p{flex:1;min-width:220px;font-size:13px;line-height:1.7;color:#716340}
+.daily-sentence-list{display:grid;gap:2px;list-style:none;margin:16px 0 0;padding:0}
+.daily-sentence-list li{display:flex;gap:13px;padding:13px 0;border-top:1px solid #f0efe6;min-width:0}
+.daily-sentence-list li>div{min-width:0;flex:1}
+.daily-sentence-number{display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;width:28px;height:28px;border-radius:50%;background:#f3f2e8;color:#7b7a63;font-size:12px;font-weight:650;font-variant-numeric:tabular-nums;margin-top:2px}
+.daily-sentence-list li[data-level="1"] .daily-sentence-number{background:#fff1bd;color:#7b6521}
+.daily-sentence-list li[data-level="2"] .daily-sentence-number{background:#dcecd2;color:#4e7347}
+.daily-sentence-list li[data-level="3"] .daily-sentence-number{background:#7fa775;color:#fff}
+.daily-sentence-en{font-size:16px;font-weight:550;line-height:1.6;overflow-wrap:anywhere}
+.daily-sentence-th{font-size:13px;color:#6c7563;line-height:1.7}
+.daily-grammar{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.daily-grammar-chip{display:inline-flex;align-items:center;gap:7px;min-height:32px;padding:4px 11px 4px 4px;border-radius:999px;border:1px solid #e3e6d6;background:#f7f9f1;font-size:12px;font-weight:550;color:#566348;text-align:left}
+.daily-grammar-chip span{display:inline-flex;align-items:center;justify-content:center;min-width:28px;height:22px;padding:0 6px;border-radius:999px;background:#dfe9d2;font-size:10px;font-weight:700;letter-spacing:.03em}
+.daily-edit-text summary{cursor:pointer;font-weight:600;font-size:14px}
+.daily-drill{display:flex;flex-direction:column;gap:14px;max-width:720px;margin:0 auto;min-width:0}
+.daily-drill-top{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.daily-drill-heading h2{font-size:24px;margin-top:6px;overflow-wrap:anywhere}
+.daily-drill-levels{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;padding:4px;border-radius:15px;background:#f1f0e6}
+.daily-drill-levels button{display:flex;align-items:center;justify-content:center;gap:7px;min-height:44px;padding:6px 8px;border-radius:11px;font-size:13px;color:#6d705f;min-width:0}
+.daily-drill-levels button span{display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;width:20px;height:20px;border-radius:50%;background:#e2e0d1;font-size:11px;font-weight:700}
+.daily-drill-levels button strong{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.daily-drill-levels button.selected{background:#fff;color:var(--ink);box-shadow:0 1px 3px #3b3a2a1f,0 1px 1px #3b3a2a0d}
+.daily-drill-levels button.selected span{background:var(--yellow);color:#4a4318}
+.daily-drill-level-note{font-size:12px;color:#737868;padding:0 4px}
+.daily-drill-dots{display:flex;gap:6px;list-style:none;margin:0;padding:2px 2px 6px;overflow-x:auto;scrollbar-width:none}
+.daily-drill-dots::-webkit-scrollbar{display:none}
+.daily-drill-dots button{display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:50%;background:#f3f2e8;color:#7b7a63;font-size:12px;font-weight:650;font-variant-numeric:tabular-nums;border:2px solid transparent}
+.daily-drill-dots button.passed{background:#dcecd2;color:#4e7347}
+.daily-drill-dots button.current{border-color:#e0bd54;background:#fff7d6;color:#5f4f1d}
+.daily-drill-dots button.current.passed{background:#dcecd2;border-color:#7fa775;color:#4e7347}
+.daily-drill-card{display:flex;flex-direction:column;gap:14px;padding:24px;min-width:0;touch-action:pan-y}
+.daily-drill-card-tools{display:flex;justify-content:flex-end}
+.daily-drill-en{font-size:clamp(21px,3.4vw,27px);font-weight:600;line-height:1.4;letter-spacing:-.012em;overflow-wrap:anywhere}
+.daily-drill-reading{display:flex;flex-direction:column;gap:2px;padding:11px 14px;border-radius:12px;background:#fff9e6;font-size:17px;line-height:1.75;color:#5f5226}
+.daily-drill-reading span{font-size:10px;font-weight:700;letter-spacing:.08em;color:#a08a3f}
+.daily-drill-reading.missing{font-size:12px;color:#8b7f58}
+.daily-drill-th{font-size:15px;line-height:1.8;color:#5b6353}
+.daily-drill-hidden{display:flex;flex-direction:column;align-items:flex-start;gap:6px;padding:18px;border:1.5px dashed #dedbca;border-radius:14px;background:#faf9f2;font-size:13px;color:#737868}
+.daily-drill-outline{margin:0;padding-left:22px;display:grid;gap:6px;font-size:15px;line-height:1.75;color:#4f5647}
+.daily-drill-mic{display:flex;align-items:center;gap:16px;padding:6px 0}
+.daily-drill-mic>div{display:flex;flex-direction:column;gap:2px;min-width:0}
+.daily-drill-mic strong{font-size:14px;font-weight:600}
+.daily-drill-mic small{font-size:12px;color:#737868;line-height:1.6}
+.daily-drill-result{display:flex;flex-direction:column;gap:9px;padding:15px 16px;border-radius:15px;font-size:14px;line-height:1.7}
+.daily-drill-result.passed{background:#eef6e9;border:1px solid #d5e6cc}
+.daily-drill-result.retry{background:#fff5ec;border:1px solid #f3d9bf}
+.daily-drill-result-head{display:flex;align-items:center;gap:10px}
+.daily-drill-result-head strong{font-size:16px}
+.daily-drill-result-mark{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:50%;flex-shrink:0;background:#7fa775;color:#fff}
+.daily-drill-result.retry .daily-drill-result-mark{background:#d9955a}
+.daily-drill-heard span,.daily-drill-missing span{display:block;font-size:10px;font-weight:700;letter-spacing:.07em;color:#7d8472}
+.daily-drill-missing mark{display:inline-block;margin:3px 6px 0 0;padding:2px 9px;border-radius:999px;background:#fde3c8;color:#8a4f1e;font-size:13px}
+.daily-drill-pron{font-size:13px;color:#6c7563}
+.daily-drill-result audio{width:100%;height:36px}
+.daily-drill-nav{display:flex;justify-content:space-between;gap:10px}
+.daily-drill-nav .button{flex:1;min-width:0}
+.daily-drill-done{align-items:center;text-align:center;gap:10px}
+.daily-drill-done>svg{color:#71966a}
+.daily-drill-done>strong{font-size:18px}
+.daily-drill-done .button-row{justify-content:center}
+div.daily-drill-done{display:flex;flex-direction:column;padding:16px;border-radius:14px;background:#f1f7ec}
+div.card.daily-drill-done{padding:28px 24px;background:#fff}
+@media (max-width:650px){
+  .ebook-step-parts{grid-template-columns:1fr}
+  .ebook-next-up{flex-direction:column;align-items:stretch}
+  .ebook-next-up .button{width:100%}
+  .ebook-prompt-card{padding:16px}
+  .daily-sentences{padding:18px}
+  .daily-sentences-head .button{width:100%}
+  .daily-drill-card{padding:18px}
+  .daily-drill-levels button{flex-direction:column;gap:3px;font-size:11px;padding:6px 2px;min-height:52px}
+  .daily-drill-nav .button{padding:12px 8px;font-size:13px}
+}
+
+/* ── Fluid layer ──────────────────────────────────────────────────────────
+   Feedback starts on press, motion follows the direction of travel, chrome
+   is a translucent layer over content, and every effect has a calm fallback
+   for reduced motion, reduced transparency and higher contrast. */
+:root{--ease-out:cubic-bezier(.22,1,.36,1);--press:100ms ease-out;--settle:320ms var(--ease-out)}
+h1{letter-spacing:-.022em}
+h2{letter-spacing:-.014em}
+.ebook-unit-result-percent,.daily-drill-top .pill,.ebook-step-meta{font-variant-numeric:tabular-nums}
+.daily-drill-en,.daily-sentence-en{color:var(--ink)}
+
+/* Press feedback is immediate; release settles back. */
+.button,.text-button,.icon-button,.mic-button,.daily-entry,.daily-grammar-chip,.ebook-stepper button,.daily-drill-dots button,.daily-drill-levels button,.bottom-nav button,.ebook-unit,.ebook-option{transition:transform var(--settle),background-color 160ms ease-out,border-color 160ms ease-out,box-shadow 200ms ease-out,color 160ms ease-out}
+.button:active:not(:disabled),.mic-button:active:not(:disabled),.daily-entry:active,.daily-grammar-chip:active,.ebook-stepper button:active:not(:disabled),.daily-drill-dots button:active,.daily-drill-levels button:active,.ebook-unit:active{transform:scale(.97);transition:transform var(--press)}
+.text-button:active:not(:disabled),.icon-button:active:not(:disabled),.bottom-nav button:active{transform:scale(.94);transition:transform var(--press)}
+@media (hover:none){.button:hover{transform:none}.button:active:not(:disabled){transform:scale(.97)}}
+
+/* Content arrives from where it is going: forward from the right, back from the left. */
+@keyframes rise-in{from{opacity:0;transform:translate3d(0,10px,0)}to{opacity:1;transform:none}}
+@keyframes step-forward{from{opacity:0;transform:translate3d(22px,0,0)}to{opacity:1;transform:none}}
+@keyframes step-back{from{opacity:0;transform:translate3d(-22px,0,0)}to{opacity:1;transform:none}}
+@keyframes fade-in{from{opacity:0}to{opacity:1}}
+@keyframes materialize{from{opacity:0;transform:scale(.96)}to{opacity:1;transform:none}}
+.page-intro,.daily-list>.daily-entry,.daily-entry-view>*,.completion-card,.ebook-unit-result,.daily-drill-result,.ebook-next-up,.notice{animation:rise-in var(--settle) backwards}
+.daily-list>.daily-entry:nth-child(2),.daily-entry-view>*:nth-child(2){animation-delay:40ms}
+.daily-list>.daily-entry:nth-child(3),.daily-entry-view>*:nth-child(3){animation-delay:80ms}
+.daily-list>.daily-entry:nth-child(n+4),.daily-entry-view>*:nth-child(n+4){animation-delay:120ms}
+.ebook-lesson-column[data-direction=forward]>.ebook-lesson-card,.daily-drill-card[data-direction=forward]{animation:step-forward var(--settle) backwards}
+.ebook-lesson-column[data-direction=back]>.ebook-lesson-card,.daily-drill-card[data-direction=back]{animation:step-back var(--settle) backwards}
+.daily-drill-card{will-change:transform}
+.ebook-dialog-backdrop,.modal-backdrop{animation:fade-in 200ms ease-out backwards}
+.ebook-dialog-backdrop>.card,.modal-backdrop>.card{animation:materialize 280ms var(--ease-out) both;transform-origin:50% 40%}
+.ebook-progress-track span,.lesson-progress-track>div{transition:width 520ms var(--ease-out)}
+.ebook-stepper li{transition:background-color 220ms ease-out,border-color 220ms ease-out}
+.ebook-step-number{transition:background-color 220ms ease-out,color 220ms ease-out}
+
+/* Chrome floats over content as a material instead of taking a hard strip. */
+.topbar{position:sticky;top:0;z-index:30;background:#fffefad1;-webkit-backdrop-filter:saturate(180%) blur(20px);backdrop-filter:saturate(180%) blur(20px);border-bottom-color:#ecece3b3}
+.bottom-nav{background:#fffefad9;-webkit-backdrop-filter:saturate(180%) blur(20px);backdrop-filter:saturate(180%) blur(20px);border-top-color:#ecece3b3}
+.bottom-nav button>span{max-width:100%;overflow:hidden;text-overflow:ellipsis}
+.bottom-nav .selected svg{transform:translateY(-1px) scale(1.06)}
+.bottom-nav svg{transition:transform var(--settle)}
+.daily-drill-dots{scroll-snap-type:x proximity}
+.daily-drill-dots li{scroll-snap-align:center}
+
+@media (prefers-reduced-transparency:reduce){
+  .topbar,.bottom-nav,.ebook-primary-actions{background:#fffefa;-webkit-backdrop-filter:none;backdrop-filter:none}
+  .ebook-dialog-backdrop,.modal-backdrop{-webkit-backdrop-filter:none;backdrop-filter:none;background:#20271fb3}
+}
+@media (prefers-contrast:more){
+  .topbar,.bottom-nav{background:#fff;-webkit-backdrop-filter:none;backdrop-filter:none;border-color:#6f7466}
+  .card,.ebook-lesson-card,.ebook-next-up,.ebook-prompt-card,.daily-drill-result,.daily-grammar-chip{border-color:#6f7466}
+  .daily-drill-levels button.selected{outline:2px solid #30312d}
+}
+@media (prefers-reduced-motion:reduce){
+  .button:active:not(:disabled),.mic-button:active:not(:disabled),.text-button:active:not(:disabled),.icon-button:active:not(:disabled),.bottom-nav button:active,.daily-entry:active,.ebook-unit:active{transform:none}
+  .bottom-nav .selected svg{transform:none}
+}
+/* Sideways motion stays inside its column and never widens the page. */
+.ebook-lesson-column,.daily-drill{overflow-x:clip}
+.ebook-open-steps li{flex-wrap:wrap;max-width:100%}

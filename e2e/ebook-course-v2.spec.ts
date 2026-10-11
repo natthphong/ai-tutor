@@ -159,7 +159,8 @@ for (const device of [
       await expect(page.locator(".ebook-unit").nth(2).locator(".ebook-level-tag")).toHaveText("B1");
       await expect(page.getByLabel("Course path progress")).toContainText("A1 0/2");
 
-      const lesson = page.locator("main.ebook-lesson-column");
+      // Teaching cards only: the outside-practice prompt repeats lesson text.
+      const lesson = page.locator("main.ebook-lesson-column .ebook-lesson-card");
       await expect(lesson.getByText("ต้องเติม -s ที่กริยา", { exact: false }).first()).toBeVisible();
       await expect(lesson.getByText("ใช้เมื่อพูดถึงกิจวัตร เช่น I wake up early.")).toBeVisible();
       await expect(lesson.getByText("Do/Does + subject + base verb?")).toBeVisible();
@@ -413,4 +414,101 @@ test("Today sends the learner to the next Ebook unit after capped review", async
   await expect(card).toContainText("เรียนจบแล้ว 12/145 บท");
   await expect(card).toContainText("ทบทวน 15 ข้อก่อน แล้วเรียนบทนี้ต่อ");
   await expect(card.locator(".pill")).toHaveText("A1");
+});
+
+// The state found on a real account: quiz, listening questions and speaking
+// passed, but the shadowing half of step 4 never done.
+const speakingBeforeShadowing = {
+  current_step: 5,
+  completed_steps: { understand: true, examples: true, quiz: true, speaking: true },
+  listening_scores: { "listen-01": true, "listen-02": true, "listen-03": true },
+  quiz_scores: Object.fromEntries(Object.keys(quizKey).map((id) => [id, true])),
+};
+
+async function installOpenShadowing(page: Page, progress: Record<string, unknown> = speakingBeforeShadowing) {
+  const course = await installCourse(page);
+  await page.route("**/api/ebook/units/ebook-002", (route) => route.fulfill({ json: { id: "ebook-002", unit: units[1], version: VERSION, status: "ready", pack, progress } }));
+  return course;
+}
+
+test("a unit with speaking passed but shadowing open says so and offers shadowing as the next action", async ({ page }) => {
+  const course = await installOpenShadowing(page);
+  await page.goto("/?view=ebook&unit=ebook-002&continue=1");
+
+  // The learner lands on the open step, and no step shows a check it has not earned.
+  const shadowStep = page.getByRole("listitem", { name: /Listen & shadow/ });
+  await expect(shadowStep).toHaveAttribute("aria-current", "step");
+  await expect(page.getByRole("listitem", { name: /Use it/ })).toHaveAttribute("data-step-state", "done");
+  await expect(page.getByTestId("ebook-part-listen")).toHaveClass(/done/);
+  await expect(page.getByTestId("ebook-part-shadow")).toHaveClass(/open/);
+  await expect(page.getByRole("progressbar", { name: "Lesson steps" })).toHaveAttribute("aria-valuenow", "4");
+
+  const nextUp = page.getByTestId("ebook-next-up");
+  await expect(nextUp).toContainText("เหลืออีก 1 ขั้น จึงครบ 100%");
+  await expect(nextUp.locator('li[data-step="shadowing"]')).toHaveClass(/open/);
+  await expect(nextUp.locator('li[data-step="speaking"]')).toHaveClass(/done/);
+
+  // Moving past the open step flags it instead of ticking it.
+  await page.getByRole("listitem", { name: /Use it/ }).getByRole("button").click();
+  await expect(shadowStep).toHaveAttribute("data-step-state", "skipped");
+  await expect(shadowStep).toContainText("ยังไม่ครบ");
+
+  await nextUp.getByRole("button", { name: "เริ่มพูดตาม 3 ประโยค" }).click();
+  await expect.poll(() => course.sessions).toEqual(["shadowing"]);
+  await expect(page).toHaveURL(/from=ebook&unit=ebook-002/);
+});
+
+test("ending a speaking session reports what the unit still needs and returns to that unit", async ({ page }) => {
+  await installOpenShadowing(page);
+  await page.route("**/api/sessions/speak-done", (route) => route.fulfill({ json: {
+    session: {
+      id: "speak-done", mode: "ebook", status: "completed",
+      state: { stage: "conversation", step: 2, hint_level: 0, independent: 2, ebook_unit_id: "2", ebook_lesson_id: "ebook-002", daily_title: "Ebook · Present simple" },
+      summary: { attempts: 2, independent: 2, mastered: false, message: "ฝึกเสร็จแล้ว" },
+      progress: { percent: 100, completed_drills: 0, total_drills: 0, independent_conversations: 2, required_conversations: 2, ready_to_complete: true },
+    },
+    lesson: {}, turns: [], attempts: [],
+  } }));
+  await page.goto("/?view=practice&session=speak-done&from=ebook&unit=ebook-002");
+
+  const result = page.getByTestId("ebook-unit-result");
+  await expect(result).toContainText("80%");
+  await expect(result).toContainText("บทนี้ยังเหลืออีก 1 ขั้น");
+  await expect(result.locator('li[data-step="shadowing"]')).toContainText("พูดตาม 3 ประโยค");
+  await expect(result.locator('li[data-step="speaking"]')).toHaveClass(/done/);
+
+  await result.getByRole("button", { name: "กลับไปทำขั้นที่เหลือ" }).click();
+  await expect(page).toHaveURL(/view=ebook&unit=ebook-002/);
+  await expect(page.getByRole("heading", { name: "Unit lesson title" })).toHaveText("Present simple");
+  await expect(page.getByRole("listitem", { name: /Listen & shadow/ })).toHaveAttribute("aria-current", "step");
+  // A plain reload afterwards restores the saved step, as before.
+  await page.reload();
+  await expect(page.getByRole("listitem", { name: /Use it/ })).toHaveAttribute("aria-current", "step");
+});
+
+test("a finished unit reports 100% after its last session", async ({ page }) => {
+  const done = { ...speakingBeforeShadowing, completed_steps: { ...speakingBeforeShadowing.completed_steps, shadowing: true }, learned: true };
+  await installOpenShadowing(page, done);
+  await page.goto("/?view=ebook&unit=ebook-002");
+  await expect(page.getByTestId("ebook-next-up")).toContainText("บทนี้ครบ 100% แล้ว");
+  await expect(page.getByRole("progressbar", { name: "Lesson steps" })).toHaveAttribute("aria-valuenow", "5");
+  for (const name of [/Understand/, /Examples/, /Quick practice/, /Listen & shadow/, /Use it/]) {
+    await expect(page.getByRole("listitem", { name })).toHaveAttribute("data-step-state", "done");
+  }
+});
+
+test("each unit offers a prompt to keep practising with an AI outside the app", async ({ page, context }) => {
+  await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+  await installCourse(page);
+  await page.goto("/?view=ebook");
+  await page.getByRole("button", { name: "Copy prompt" }).click();
+  await expect(page.getByRole("button", { name: "คัดลอกแล้ว" })).toBeVisible();
+  const copied = await page.evaluate(() => navigator.clipboard.readText());
+  expect(copied).toContain("Lesson: Present simple");
+  expect(copied).toContain("My level for this lesson: A1");
+  expect(copied).toContain(pack.pattern);
+  expect(copied).toContain("wake up");
+  expect(copied).toContain("She leaves home early.");
+  expect(copied).toContain("Ask ONE short question at a time");
+  await expect(page.getByTestId("ebook-unit-prompt")).toHaveText(copied);
 });

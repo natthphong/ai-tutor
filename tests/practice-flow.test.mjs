@@ -51,10 +51,16 @@ test("listening UI keeps English hidden until the server supplies a caption", ()
 });
 
 test("Daily Meet fixture flow persists jobs, edits owned text, and launches supported modes", () => {
-  assert.match(dailyMeet, /localStorage\.setItem\(key,r\.job_id\)/);
+  assert.match(dailyMeet, /localStorage\.setItem\(key,\s*result\.job_id\)/);
   assert.match(dailyMeet, /awaitJob<DailyEntry>/);
-  assert.match(dailyMeet, /method:"PATCH"/);
+  assert.match(dailyMeet, /method:\s*"PATCH"/);
   assert.match(dailyMeet, /`\/daily-meets\/\$\{selected\.id\}\/sessions`/);
   for (const mode of ["free", "live", "listening"]) assert.ok(dailyMeet.includes(`practice("${mode}")`));
   assert.match(dailyMeet, /selected\.source/);
+});
+
+test("Daily Meet offers sentence analysis and the sentence-by-sentence drill", () => {
+  assert.match(dailyMeet, /\/analyze`/);
+  assert.match(dailyMeet, /<DailyDrill /);
+  assert.match(dailyMeet, /sentence\.grammar\.map/);
 });

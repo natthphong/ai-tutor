@@ -109,6 +109,7 @@ test("Daily Meet generates a saved entry and launches listening practice", async
     id: "meet-1", day: "2026-09-06", title: "Stand-up", source: "แก้ payment API แล้ว",
     english: "I fixed the payment API.", thai: "ฉันแก้ payment API แล้ว",
     question: "What did you fix?", question_th: "คุณแก้อะไร", phrases: [{ en: "fix the API", th: "แก้ API", note: "งาน" }],
+    sentences: [{ en: "I fixed the payment API.", th: "ฉันแก้ payment API แล้ว", reading_th: "ไอ ฟิกซ์ท เดอะ เพย์-เมนท์ เอ-พี-ไอ", grammar: [] }], analyzed: true,
   };
   await installApi(page, (path, method) => {
     if (path === "/auth/me") return user;
@@ -127,7 +128,7 @@ test("Daily Meet generates a saved entry and launches listening practice", async
   await page.getByRole("button", { name: /เขียนบันทึกใหม่/ }).click();
   await page.getByLabel("เรื่องที่อยากเล่า").fill("แก้ payment API แล้ว และรอ QA ยืนยัน");
   await page.getByRole("button", { name: "เรียบเรียงและบันทึกเป็นอังกฤษ" }).click();
-  await expect(page.getByText("I fixed the payment API.")).toBeVisible();
+  await expect(page.getByTestId("daily-sentence")).toContainText("I fixed the payment API.");
   await page.getByRole("button", { name: "ฝึกฟังเรื่องวันนี้" }).click();
   await expect(page.getByRole("heading", { name: "Stand-up" })).toBeVisible();
   await expect(page.getByText("ฟังรอบที่ 1")).toBeVisible();

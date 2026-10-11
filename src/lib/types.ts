@@ -15,4 +15,7 @@ export type Progress = components["schemas"]["Progress"];
 export type DailyPlan = components["schemas"]["DailyPlan"];
 
 export type DailyEntry = components["schemas"]["DailyMeet"];
+export type DailySentence = components["schemas"]["DailySentence"];
+export type DailyDrillProgress = components["schemas"]["DailyDrill"];
+export type DailySpeakResult = components["schemas"]["DailySpeakResult"];
 export type ListenResult = components["schemas"]["ListenResult"];
